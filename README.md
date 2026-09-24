@@ -68,7 +68,7 @@ project. Nine of them feed the score; the income data is only used for the compa
 publisher, it is linked here. Several files do not record their original publisher, so this
 project says that instead of guessing.
 
-**SA2 boundaries** (`SA2_2021_AUST_GDA2020.*`). Polygons for all 2,473 SA2 regions in
+**SA2 boundaries** (`data/SA2_2021_AUST_GDA2020.*`). Polygons for all 2,473 SA2 regions in
 Australia (2021 edition), with each region's name, codes and area in km². SA2s are
 medium-sized areas built to represent communities that interact socially and economically,
 usually with 3,000 to 25,000 residents
@@ -77,21 +77,21 @@ The file's own metadata names the ABS as its publisher and describes it as part 
 Australian Statistical Geography Standard (ASGS). We kept the 373 regions in Greater Sydney
 and stored every polygon as a MultiPolygon in SRID 4326.
 
-**Businesses** (`Businesses.csv`). 12,217 rows counting businesses by industry (19 industries)
+**Businesses** (`data/Businesses.csv`). 12,217 rows counting businesses by industry (19 industries)
 and annual turnover band, for 643 NSW SA2 regions. The only change was renaming `sa2_code` to
 `SA2_CODE21` so it matches the other tables. The retained file does not record its original
 publisher.
 
-**Income** (`Income.csv`). Earners, median age, and median and mean income for 642 NSW SA2
+**Income** (`data/Income.csv`). Earners, median age, and median and mean income for 642 NSW SA2
 regions. We renamed the code column and replaced `np` ("not provided", 28 cells) with NULL.
 The retained file does not record its original publisher.
 
-**Population** (`Population.csv`). People by five-year age band, for the 373 Greater Sydney
+**Population** (`data/Population.csv`). People by five-year age band, for the 373 Greater Sydney
 regions only (not all of NSW). We renamed the code column. In the database we add a
 `young_people` column (ages 0 to 19), which drives the schools measure and the region filter.
 The retained file does not record its original publisher.
 
-**Public transport stops** (`Stops.txt`). 114,718 stop records for the whole of NSW, in the
+**Public transport stops** (`data/Stops.txt`). 114,718 stop records for the whole of NSW, in the
 GTFS `stops.txt` format
 ([GTFS reference](https://github.com/google/transit/blob/master/gtfs/spec/en/reference.md)).
 About half of them (53,991) have `location_type` 1, which GTFS defines as a station, meaning a
@@ -99,7 +99,7 @@ structure that contains platforms. The rest are stops or platforms. We renamed t
 columns and turned them into points. The retained file does not record its original
 publisher.
 
-**Polling places** (`PollingPlaces2019.csv`). 2,930 polling places for the 2019 federal
+**Polling places** (`data/PollingPlaces2019.csv`). 2,930 polling places for the 2019 federal
 election, all in NSW, published by the Australian Electoral Commission
 ([AEC](https://www.aec.gov.au/elections/federal_elections/2019/downloads.htm),
 [data.gov.au](https://data.gov.au/data/dataset/au-govt-aec-aec-federal-election-polling-places-2019-na)).
@@ -107,25 +107,25 @@ election, all in NSW, published by the Australian Electoral Commission
 on the map. We dropped `the_geom` and `premises_state_abbreviation` (which repeats `state`)
 and built points from latitude and longitude.
 
-**School catchments** (`catchments_primary.*`, `catchments_secondary.*`, `catchments_future.*`).
+**School catchments** (`data/catchments_primary.*`, `data/catchments_secondary.*`, `data/catchments_future.*`).
 Polygons for 1,662 primary, 436 secondary and 30 "future" catchments. We stacked primary and
 secondary into one table, and where a school (`USE_ID`) also has a future catchment, the
 future one takes priority. We dropped columns we didn't use (`PRIORITY`, `KINDERGART`,
 `YEAR1` to `YEAR12`, `ADD_DATE`). The retained files do not record their original
 publisher.
 
-**Traffic lights** (`traffic-lights-location-data-may-2021.csv`). 4,325 signal records across
+**Traffic lights** (`data/traffic-lights-location-data-may-2021.csv`). 4,325 signal records across
 NSW as of May 2021, from Transport for NSW on
 [Data.NSW](https://www.data.nsw.gov.au/data/dataset/2-traffic-lights-location). By asset type
 that's 3,867 vehicle signals, 452 pedestrian signals and 6 "re-active maintenance" records. We
 count all of them, and keep only the suburb and the location.
 
-**Public amenities** (`public_amenities.geojson`). 6,595 OpenStreetMap points: 4,053 public
+**Public amenities** (`data/public_amenities.geojson`). 6,595 OpenStreetMap points: 4,053 public
 toilets and 2,542 drinking water points, exported with
 [Overpass turbo](https://overpass-turbo.eu/). We kept the geometry only. The export date isn't
 recorded.
 
-**Crossings** (`crossings.geojson`). 1,825 OpenStreetMap points, also exported with Overpass
+**Crossings** (`data/crossings.geojson`). 1,825 OpenStreetMap points, also exported with Overpass
 turbo. Every one is tagged `crossing=zebra`, so this is zebra crossings only, not every
 pedestrian crossing in NSW. Pedestrian signals probably show up in the traffic lights file
 instead (that's where the 452 pedestrian signals above come from).
@@ -575,7 +575,7 @@ committed `index.html` and `images/` instead. The earlier Folium map is still in
 | `scripts/` | `run.sh` (entry point), `wait_for_db.py`, `check_results.py`, `income_correlation.py` (the correlation numbers in Results), and `build_story.py` with `story_template.html` (the story page and the figures) |
 | `expected/` | Reference results for the check |
 | `Credentials.example.json` | Template for `Credentials.json` (git-ignored) |
-| Data files | The ten datasets described in [The data](#the-data), plus `catchment_sf_info.json`, which the notebook doesn't use |
+| `data/` | The ten datasets described in [The data](#the-data), plus `catchment_sf_info.json`, which the notebook doesn't use |
 
 ## Credits and licences
 

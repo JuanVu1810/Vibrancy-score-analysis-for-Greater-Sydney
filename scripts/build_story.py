@@ -40,7 +40,8 @@ import pandas as pd
 import geopandas as gpd
 
 ROOT = Path(__file__).resolve().parent.parent
-SHAPEFILE = ROOT / "SA2_2021_AUST_GDA2020.shp"
+DATA_DIR = ROOT / "data"
+SHAPEFILE = DATA_DIR / "SA2_2021_AUST_GDA2020.shp"
 TEMPLATE = Path(__file__).with_name("story_template.html")
 
 # --- The parts of the design that every view shares ---------------------------------------------
@@ -89,7 +90,7 @@ def load_regions(scores) -> gpd.GeoDataFrame:
         on="SA2_CODE21", how="left")
 
     # Residents for every region (the scores file only has the scored ones)
-    pop = pd.read_csv(ROOT / "Population.csv", usecols=["sa2_code", "total_people"])
+    pop = pd.read_csv(DATA_DIR / "Population.csv", usecols=["sa2_code", "total_people"])
     g = g.merge(pop.rename(columns={"sa2_code": "SA2_CODE21", "total_people": "residents"}),
                 on="SA2_CODE21", how="left")
 
