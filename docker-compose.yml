@@ -1,0 +1,40 @@
+services:
+  # PostgreSQL with the PostGIS extension. The password must come from an ignored .env file.
+  db:
+    image: postgis/postgis:16-3.4
+    platform: linux/amd64          # the image is amd64-only; emulated on Apple Silicon
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Copy .env.example to .env and set DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-postgres}
+    ports:
+      # 5433 on the host so it does not clash with a Postgres already on 5432.
+      # Keep the database inaccessible from other machines even when a strong password is used.
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # Runs the notebook and checks the results:  docker compose run --rm runner
+  runner:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?Copy .env.example to .env and set DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-postgres}
+    volumes:
+      - .:/work
+    working_dir: /work
+    command: ["bash", "scripts/run.sh"]
+
+volumes:
+  pgdata:

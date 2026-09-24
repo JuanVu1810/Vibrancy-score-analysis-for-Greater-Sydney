@@ -1,0 +1,9 @@
+.ipynb_checkpoints/
+Credentials.json
+.env
+.env.*
+!.env.example
+output/
+.venv/
+.ai/
+__pycache__/

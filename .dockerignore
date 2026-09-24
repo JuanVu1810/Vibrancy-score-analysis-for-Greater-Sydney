@@ -1,0 +1,5 @@
+# The image only needs the requirements files; the project is bind-mounted at run time.
+# Keeping the build context tiny avoids sending ~130 MB of data to the daemon.
+*
+!requirements.txt
+!requirements.lock

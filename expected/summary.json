@@ -1,0 +1,59 @@
+{
+  "_source": "Saved outputs of the bustling_score notebook (cells 60 and 62) from the original run. Scores are as displayed (6 decimals).",
+  "n_scored_regions": 359,
+  "correlation_bustling_vs_median_income": 0.158244,
+  "top5": [
+    {
+      "SA2_CODE21": 117031644,
+      "SA2_NAME21": "Sydney (North) - Millers Point",
+      "bustling_score": 0.999568
+    },
+    {
+      "SA2_CODE21": 117031645,
+      "SA2_NAME21": "Sydney (South) - Haymarket",
+      "bustling_score": 0.997146
+    },
+    {
+      "SA2_CODE21": 117031639,
+      "SA2_NAME21": "Chippendale",
+      "bustling_score": 0.982249
+    },
+    {
+      "SA2_CODE21": 117031329,
+      "SA2_NAME21": "Darlinghurst",
+      "bustling_score": 0.961758
+    },
+    {
+      "SA2_CODE21": 117031646,
+      "SA2_NAME21": "Ultimo",
+      "bustling_score": 0.935116
+    }
+  ],
+  "bottom5": [
+    {
+      "SA2_CODE21": 122021421,
+      "SA2_NAME21": "Bayview - Elanora Heights",
+      "bustling_score": 0.331217
+    },
+    {
+      "SA2_CODE21": 122031432,
+      "SA2_NAME21": "Terrey Hills - Duffys Forest",
+      "bustling_score": 0.330694
+    },
+    {
+      "SA2_CODE21": 102021051,
+      "SA2_NAME21": "Ourimbah - Fountaindale",
+      "bustling_score": 0.329921
+    },
+    {
+      "SA2_CODE21": 127011726,
+      "SA2_NAME21": "Cobbitty - Bringelly",
+      "bustling_score": 0.327832
+    },
+    {
+      "SA2_CODE21": 124031465,
+      "SA2_NAME21": "Warragamba - Silverdale",
+      "bustling_score": 0.327671
+    }
+  ]
+}
