@@ -13,6 +13,12 @@ SQLAlchemy==2.0.36
 GeoAlchemy2==0.16.0
 psycopg2-binary==2.9.10
 
+# ETL: downloading sources and reading ABS Excel files
+requests==2.34.2
+openpyxl==3.1.5
+pandera==0.32.1     # table contracts; the same version as the CPI forecast project
+pytest==9.1.1        # tests/ for the ETL's checks
+
 # Plots and map
 plotly==5.24.1
 folium==0.18.0
