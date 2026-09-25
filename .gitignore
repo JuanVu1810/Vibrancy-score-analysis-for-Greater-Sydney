@@ -7,3 +7,5 @@ output/
 .venv/
 .ai/
 __pycache__/
+raw/
+staging/

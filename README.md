@@ -549,6 +549,14 @@ reads `expected/bustling_scores.csv` and writes to `output/`; add `--out .` to r
 committed `index.html` and `images/` instead. The earlier Folium map is still in the repository as
 [`bustling_score_map.html`](bustling_score_map.html), but nothing links to it any more.
 
+### Getting fresh data (the v2 ETL)
+
+Everything above runs on the files in `data/`, which are frozen. A separate ETL in [`etl/`](etl/README.md)
+downloads the latest release of every source from its publisher, cleans it, checks it, and loads it
+into a `v2` schema in the same database, without touching `data/` or the tables this analysis uses.
+See [`etl/README.md`](etl/README.md) for how to run it, what it needs (a free Transport for NSW API
+key) and how it recorded where each file came from.
+
 ### How the results are checked
 
 `scripts/check_results.py` compares a fresh run with the original results in two ways:
