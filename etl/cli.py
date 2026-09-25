@@ -73,13 +73,14 @@ def cmd_run(args) -> int:
             report[src.id] = {"status": "failed", "reason": str(e)}
 
     if not args.no_db and tables:
-        print("\n== loading into PostGIS")
         try:
             from . import load
+            settings = load.connection_settings(args.credentials, args.db_host, args.db_name)
+            print(f"\n== loading into PostGIS at {load.describe(settings)}")
             table_sources = {t: TABLES[t] for t in tables}
             bad = load.load(tables, table_sources, dict(ctx.manifest.data["sources"]), BY_ID,
-                            quality=quality.records_to_frame(ctx.quality).assign(
-                                run_at=started_at, mode=args.mode))
+                            quality=quality.records_to_frame(ctx.quality).assign(run_at=started_at, mode=args.mode),
+                            settings=settings)
             failed += [f"load:{t}" for t, _ in bad]
         except Exception as e:
             failed.append("load")
@@ -116,6 +117,11 @@ def main() -> None:
     r.add_argument("--only", nargs="+", metavar="SOURCE", help="run just these sources or tables (see 'list')")
     r.add_argument("--refresh", action="store_true", help="download again even if the server says nothing changed")
     r.add_argument("--no-db", action="store_true", help="write staging/ files only, skip PostGIS")
+    r.add_argument("--credentials", metavar="FILE", help="load into the database in this credentials file (like "
+                   "Credentials.json) instead of the one docker compose starts")
+    r.add_argument("--db-host", metavar="HOST", help="override the database host (from inside Docker, "
+                   "host.docker.internal is your own computer)")
+    r.add_argument("--db-name", metavar="NAME", help="override the database name")
     r.set_defaults(func=cmd_run)
 
     v = sub.add_parser("verify", help="check the staged tables (add --parity to test the parsers against v1)")

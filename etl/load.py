@@ -26,21 +26,39 @@ _INDEXES = {
 }
 
 
-def connection_settings() -> dict:
-    """Same rules as the notebook: DB_* environment variables first, then Credentials.json."""
-    if os.environ.get("DB_PASSWORD"):
-        return {"host": os.environ.get("DB_HOST", "localhost"), "port": int(os.environ.get("DB_PORT", "5432")),
-                "user": os.environ.get("DB_USER", "postgres"), "password": os.environ["DB_PASSWORD"],
-                "database": os.environ.get("DB_NAME", os.environ.get("DB_USER", "postgres"))}
-    path = os.environ.get("CREDENTIALS_FILE", str(ROOT / "Credentials.json"))
-    with open(path, encoding="utf-8") as f:
-        c = json.load(f)
-    c.setdefault("database", c["user"])
+def connection_settings(credentials_file: str | None = None, host: str | None = None,
+                        database: str | None = None) -> dict:
+    """Where to load. By default the same rules as the notebook: DB_* environment variables (what docker compose
+    sets, for its own database), then Credentials.json. `credentials_file` says to use that file instead of the
+    environment, and `host` and `database` override what it names (for example host.docker.internal to reach
+    a PostgreSQL that runs on your own computer, from inside Docker)."""
+    if credentials_file:
+        with open(ROOT / credentials_file, encoding="utf-8") as f:
+            c = json.load(f)
+        c.setdefault("database", c["user"])
+    elif os.environ.get("DB_PASSWORD"):
+        c = {"host": os.environ.get("DB_HOST", "localhost"), "port": int(os.environ.get("DB_PORT", "5432")),
+             "user": os.environ.get("DB_USER", "postgres"), "password": os.environ["DB_PASSWORD"],
+             "database": os.environ.get("DB_NAME", os.environ.get("DB_USER", "postgres"))}
+    else:
+        path = os.environ.get("CREDENTIALS_FILE", str(ROOT / "Credentials.json"))
+        with open(path, encoding="utf-8") as f:
+            c = json.load(f)
+        c.setdefault("database", c["user"])
+    if host:
+        c["host"] = host
+    if database:
+        c["database"] = database
     return c
 
 
-def engine():
-    c = connection_settings()
+def describe(settings: dict) -> str:
+    """The target as host:port/database, never the password."""
+    return f"{settings['host']}:{settings['port']}/{settings['database']}"
+
+
+def engine(settings: dict | None = None):
+    c = settings or connection_settings()
     url = URL.create("postgresql+psycopg2", username=c["user"], password=c["password"],
                      host=c["host"], port=c["port"], database=c["database"])
     return create_engine(url)
@@ -50,14 +68,15 @@ def _comment(source, release: str, retrieved: str) -> str:
     return f"{source.title}. Release: {release}. Retrieved {retrieved[:10]}. Licence: {source.licence}."
 
 
-def load(tables: dict, table_sources: dict, records: dict, sources_by_id: dict, quality=None, log=print) -> list:
+def load(tables: dict, table_sources: dict, records: dict, sources_by_id: dict, quality=None, settings: dict | None = None,
+         log=print) -> list:
     """Write `tables` (name -> DataFrame) to schema v2, and every manifest record to v2.etl_manifest.
 
     `table_sources` maps a table name to its Source, `records` is the whole manifest (source id ->
     record) and `sources_by_id` maps source ids to Sources. Returns (table, problem) pairs for tables
     that failed to load.
     """
-    eng, failures = engine(), []
+    eng, failures = engine(settings), []
     with eng.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}"))

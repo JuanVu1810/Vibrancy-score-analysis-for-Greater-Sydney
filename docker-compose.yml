@@ -51,6 +51,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?Copy .env.example to .env and set DB_PASSWORD}
       DB_NAME: ${DB_NAME:-postgres}
       TFNSW_API_KEY: ${TFNSW_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # lets --db-host host.docker.internal reach a PostgreSQL on your computer
     volumes:
       - .:/work
     working_dir: /work

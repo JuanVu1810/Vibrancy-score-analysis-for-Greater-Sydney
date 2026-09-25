@@ -20,6 +20,9 @@ from .core import AU_BBOX, NSW_BBOX
 from .quality import QualityRecord, counts
 
 SA2_CODE_RANGE = (100_000_000, 199_999_999)  # NSW SA2 codes start with 1
+SA1_CODE_RANGE = (10_000_000_000, 19_999_999_999)  # NSW SA1 and mesh block codes have 11 digits and start with 1
+ROAD_TYPES = ("residential", "living_street", "unclassified", "tertiary", "tertiary_link", "secondary",
+              "secondary_link", "primary", "primary_link", "trunk", "trunk_link", "pedestrian")
 INDUSTRIES = list("ABCDEFGHIJKLMNOPQRS")
 AGE_BANDS = ["0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49",
              "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80-84", "85-and-over"]
@@ -57,6 +60,11 @@ def build_schemas() -> dict:
         return pa.Column("geometry", checks=[pa.Check(lambda s: ~s.dropna().is_empty, name="not empty",
                                                       element_wise=False)], nullable=False)
 
+    def lines():
+        return pa.Column("geometry", checks=[
+            pa.Check(lambda s: (s.dropna().geom_type == "LineString") & ~s.dropna().is_empty, name="a line",
+                     element_wise=False)], nullable=False)
+
     def table(columns, geo=False, strict=True, unique=None):
         schema = pag.DataFrameSchema if geo else pa.DataFrameSchema
         return schema(columns, coerce=True, strict=strict, unique=unique)
@@ -71,6 +79,13 @@ def build_schemas() -> dict:
             **text(["GCC_CODE21", "AUS_CODE21", "AUS_NAME21", "CHG_LBL21", "LOCI_URI21"], nullable=True),
             "AREASQKM21": pa.Column(float, pa.Check.gt(0), nullable=False),
             "geom": polygons()}, geo=True),
+        "mesh_blocks": table({
+            **ints(["MB_CODE21"], *SA1_CODE_RANGE, nullable=False, unique=True),
+            **text(["category"]),
+            "area_sqkm": pa.Column(float, pa.Check.ge(0), nullable=True),
+            **ints(["dwellings", "persons"], lo=0),
+            **ints(["SA1_CODE21"], *SA1_CODE_RANGE, nullable=False),
+            **ints(["SA2_CODE21"], *SA2_CODE_RANGE, nullable=False)}),
         "businesses": table({
             **text(["industry_code"], allowed=INDUSTRIES),
             **text(["industry_name", "sa2_name"]),
@@ -122,6 +137,17 @@ def build_schemas() -> dict:
             **text(["osm_id"], unique=True),
             **text(["amenity"], allowed=["toilets", "drinking_water"]),
             **text(["name"], nullable=True),
+            "geom": points(NSW_BBOX)}, geo=True),
+        "roads": table({
+            **text(["osm_id"], unique=True),
+            **text(["highway"], allowed=list(ROAD_TYPES)),
+            **text(["name"], nullable=True),
+            "geom": lines()}, geo=True),
+        "daily_living_shops": table({
+            **text(["osm_id"], unique=True),
+            **text(["kind"], allowed=["supermarket", "convenience"]),
+            **text(["shop", "amenity", "name", "brand"], nullable=True),
+            **text(["mapped_as"], allowed=["node", "area"]),
             "geom": points(NSW_BBOX)}, geo=True),
         "crossings": table({
             **text(["osm_id"], unique=True),

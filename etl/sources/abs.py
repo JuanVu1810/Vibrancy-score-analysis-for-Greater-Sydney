@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import urljoin
 
 import geopandas as gpd
@@ -47,6 +48,14 @@ _SA2_COLS = ["SA2_CODE21", "SA2_NAME21", "CHG_FLAG21", "CHG_LBL21", "SA3_CODE21"
              "AUS_CODE21", "AUS_NAME21", "AREASQKM21", "LOCI_URI21"]
 
 
+def the_shapefile(folder: Path) -> Path:
+    """The one .shp file in an unzipped boundary download."""
+    found = sorted(folder.rglob("*.shp"))
+    if len(found) != 1:
+        raise EtlError(f"expected one shapefile in {folder.name}/, found {len(found)}")
+    return found[0]
+
+
 def to_multipolygon(geom):
     return MultiPolygon([geom]) if geom is not None and geom.geom_type == "Polygon" else geom
 
@@ -57,7 +66,7 @@ def fetch_sa2(ctx) -> Snapshot:
 
 
 def parse_sa2(snap: Snapshot) -> dict:
-    gdf = gpd.read_file(f"zip://{snap.path()}")
+    gdf = gpd.read_file(the_shapefile(snap.unzip()))
     gdf = gdf[gdf["GCC_NAME21"] == "Greater Sydney"].copy()
     gdf = gdf.to_crs(epsg=4326)
     for col in _SA2_INT:
@@ -357,6 +366,133 @@ def check_population(out: dict, ctx) -> list:
     return issues
 
 
+# =============================================================================================
+# Mesh block dwellings need the ABS download location of the allocation file, defined here
+# =============================================================================================
+ASGS_DOWNLOADS = (f"{ABS}/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/"
+                  "jul2021-jun2026/access-and-downloads")
+
+
+# =============================================================================================
+# Mesh blocks: 2021 Census dwellings and persons, with the SA1 and SA2 each block belongs to
+# =============================================================================================
+MB_PAGE = f"{ABS}/census/guide-census-data/mesh-block-counts/2021"
+MB_ALLOCATION = f"{ASGS_DOWNLOADS}/allocation-files/MB_2021_AUST.xlsx"
+MB_COLS = ["MB_CODE21", "category", "area_sqkm", "dwellings", "persons", "SA1_CODE21", "SA2_CODE21"]
+
+
+def _find(header: list, pattern: str) -> int:
+    """Index of the first heading matching the regex `pattern`."""
+    for i, h in enumerate(header):
+        if h is not None and re.search(pattern, str(h).strip(), re.I):
+            return i
+    raise EtlError(f"no column matching {pattern!r} in {header}")
+
+
+def fetch_mesh_blocks(ctx) -> Snapshot:
+    r = ctx.get(MB_PAGE)
+    r.raise_for_status()
+    link = find_link(r.text, r"Mesh%20Block%20Counts[^\"]*\.xlsx")
+    if not link:
+        raise EtlError("abs_mesh_blocks: the mesh block counts workbook was not found on its page")
+    counts = ctx.download("abs_mesh_blocks", "counts", link, filename="mesh_block_counts_2021.xlsx")
+    alloc = ctx.download("abs_mesh_blocks", "allocation", MB_ALLOCATION)
+    return Snapshot("abs_mesh_blocks", "2021 Census counts", link, {"counts": counts, "allocation": alloc},
+                    {"counts_page": MB_PAGE})
+
+
+def parse_mesh_counts_ws(ws) -> pd.DataFrame:
+    """MB_CODE21, category, area_sqkm, dwellings and persons from one state's sheet of the counts workbook."""
+    rows, cols = [], None
+    for r in ws.iter_rows(max_col=8, values_only=True):
+        if cols is None:
+            if r[0] == "MB_CODE_2021":
+                cols = (_find(r, r"^MB_CATEGORY"), _find(r, r"^AREA"), _find(r, r"^Dwelling"), _find(r, r"^Person"))
+            continue
+        code = str(r[0]).strip() if r[0] is not None else ""
+        if code.isdigit() and len(code) == 11:
+            c_cat, c_area, c_dw, c_pe = cols
+            rows.append([int(code), r[c_cat], r[c_area], to_int(r[c_dw]), to_int(r[c_pe])])
+    if cols is None:
+        raise EtlError(f"mesh block counts sheet {ws.title!r}: no MB_CODE_2021 header")
+    df = pd.DataFrame(rows, columns=["MB_CODE21", "category", "area_sqkm", "dwellings", "persons"])
+    df["area_sqkm"] = pd.to_numeric(df["area_sqkm"], errors="coerce")
+    for col in ("MB_CODE21", "dwellings", "persons"):
+        df[col] = df[col].astype("Int64")
+    return df
+
+
+def parse_mesh_allocation_ws(ws) -> pd.DataFrame:
+    """The SA1 and SA2 of every Greater Sydney mesh block, from the ABS allocation workbook."""
+    rows, cols = [], None
+    for r in ws.iter_rows(max_col=30, values_only=True):
+        if cols is None:
+            if r[0] == "MB_CODE_2021":
+                cols = (_find(r, r"^SA1_CODE"), _find(r, r"^SA2_CODE"), _find(r, r"^GCCSA_CODE"))
+            continue
+        if cols is None or r[0] is None:
+            continue
+        c_sa1, c_sa2, c_gcc = cols
+        if r[c_gcc] == "1GSYD" and str(r[0]).strip().isdigit():
+            rows.append([int(str(r[0]).strip()), int(str(r[c_sa1]).strip()), int(str(r[c_sa2]).strip())])
+    if cols is None:
+        raise EtlError(f"allocation sheet {ws.title!r}: no MB_CODE_2021 header")
+    return pd.DataFrame(rows, columns=["MB_CODE21", "SA1_CODE21", "SA2_CODE21"]).astype("Int64")
+
+
+def parse_mesh_blocks(snap: Snapshot) -> dict:
+    wb = load_workbook(snap.path("counts"), read_only=True, data_only=True)
+    frames = []
+    for ws in wb.worksheets:
+        if not ws.title.startswith("Table"):
+            continue
+        head = " ".join(str(r[0]) for r in ws.iter_rows(min_row=1, max_row=8, max_col=1, values_only=True) if r[0])
+        if "New South Wales" in head:  # the state is split over two sheets (part 1 and 2)
+            frames.append(parse_mesh_counts_ws(ws))
+    if not frames:
+        raise EtlError("mesh block counts: no New South Wales sheets found")
+    counts = pd.concat(frames, ignore_index=True)
+
+    wb = load_workbook(snap.path("allocation"), read_only=True, data_only=True)
+    alloc = None
+    for ws in wb.worksheets:
+        if ws.title.lower() in ("contents", "explanatory notes", "disclaimer", "further information"):
+            continue
+        try:
+            alloc = parse_mesh_allocation_ws(ws)
+            break
+        except EtlError:
+            continue
+    if alloc is None:
+        raise EtlError("mesh block allocation: no sheet with MB_CODE_2021 found")
+
+    merged = alloc.merge(counts, on="MB_CODE21", how="left")
+    snap.release = "2021 Census counts (released 28 June 2022)"
+    snap.extra.update(nsw_mesh_blocks=len(counts), greater_sydney_mesh_blocks=len(alloc),
+                      without_counts=int(merged["dwellings"].isna().sum()))
+    merged = merged[MB_COLS].sort_values("MB_CODE21").reset_index(drop=True)
+    return {"mesh_blocks": merged}
+
+
+def check_mesh_blocks(out: dict, ctx) -> list:
+    df, issues = out["mesh_blocks"], []
+    if not (30_000 <= len(df) <= 90_000):
+        issues.append(error(f"{len(df):,} Greater Sydney mesh blocks, expected tens of thousands"))
+    if df["MB_CODE21"].duplicated().any():
+        issues.append(error("duplicate mesh block codes"))
+    dwellings, persons = int(df["dwellings"].sum()), int(df["persons"].sum())
+    if not (1_800_000 <= dwellings <= 2_800_000):
+        issues.append(error(f"{dwellings:,} dwellings in Greater Sydney looks wrong"))
+    if not (4_500_000 <= persons <= 6_000_000):
+        issues.append(error(f"{persons:,} people in Greater Sydney looks wrong"))
+    if df["dwellings"].isna().any():
+        issues.append(warn(f"{int(df['dwellings'].isna().sum())} mesh blocks have no Census count"))
+    sa2 = greater_sydney_codes(ctx)
+    if sa2 is not None and set(df["SA2_CODE21"]) - sa2:
+        issues.append(error("some mesh blocks belong to SA2s that are not in the SA2 boundaries"))
+    return issues
+
+
 SOURCES = [
     Source("asgs_sa2", "SA2 boundaries (ASGS Edition 3, 2021)", LICENCE, ATTRIBUTION,
            ("sa2_boundaries",), fetch_sa2, parse_sa2, check_sa2),
@@ -366,4 +502,6 @@ SOURCES = [
            ("income",), fetch_income, parse_income, check_income),
     Source("abs_population", "Regional population by age and sex (SA2, persons)", LICENCE, ATTRIBUTION,
            ("population",), fetch_population, parse_population, check_population),
+    Source("abs_mesh_blocks", "Census 2021 mesh block counts (dwellings, persons) with SA1 and SA2", LICENCE,
+           ATTRIBUTION, ("mesh_blocks",), fetch_mesh_blocks, parse_mesh_blocks, check_mesh_blocks),
 ]

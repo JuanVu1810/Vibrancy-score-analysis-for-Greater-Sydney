@@ -28,8 +28,67 @@ docker compose run --rm --no-deps etl verify           # check the staged tables
 docker compose run --rm --no-deps etl verify --parity  # also test the parsers against the v1 files (downloads about 10 MB)
 ```
 
+### Which database it loads into
+
+`docker compose run --rm etl` loads into the database docker compose starts (port 5433, separate from any
+PostgreSQL you have installed). To load into a PostgreSQL that runs on your own computer, such as the one your
+pgAdmin shows on port 5432 and the notebook's `Credentials.json` describes:
+
+```bash
+docker compose run --rm --no-deps etl run --mode pinned \
+    --credentials Credentials.json --db-host host.docker.internal --db-name postgres
+```
+
+`--credentials` takes the user, password and port from that file. `--db-host host.docker.internal` is needed
+because "localhost" inside Docker means the container itself. `--db-name postgres` is needed because
+`Credentials.json` names a database called `localhost`, which doesn't exist on that server (its only database is
+`postgres`). Either way the ETL only creates and replaces tables in a schema called `v2`; your `public` tables and
+any other schemas are left alone.
+
 Run it in Docker: the pinned geospatial libraries aren't installed on a plain host Python. Without
 Docker, `python -m etl ...` works in an environment built from `requirements.lock`.
+
+## From scratch, and starting over
+
+Everything from a clean project folder to the loaded database. You need Docker Desktop running and this branch
+checked out (`git switch v2-etl`).
+
+```bash
+# 1. First time only: your private settings. Put a DB_PASSWORD in .env; a TFNSW_API_KEY is optional (see below).
+cp .env.example .env
+
+# 2. Build the image (first time, and whenever requirements.lock changes; later builds are cached).
+docker compose build etl
+
+# 3. Download, unzip, clean, check, and load everything into the Docker database (port 5433).
+docker compose run --rm etl
+
+# 3b. Or load into the PostgreSQL that pgAdmin shows on port 5432 (schema v2 only; your public tables are untouched).
+docker compose run --rm --no-deps etl run --credentials Credentials.json --db-host host.docker.internal --db-name postgres
+
+# 4. Check it (add --parity to also test the parsers against the v1 files; that downloads about 10 MB).
+docker compose run --rm --no-deps etl verify
+```
+
+Step 3 downloads about 750 MB (the transit feed is 290 MB and the OpenStreetMap extract 260 MB), unzips it to about
+2.4 GB, and reads it. ABS cuts big downloads off now and then; the ETL resumes them, so if you see "interrupted ...
+resuming" that is normal. The download is the slow part on a slow connection, so expect anything from a few minutes to
+most of an hour. To load a second database from the files you already have, add `--mode pinned` to the 3b command: it
+reuses the downloaded files and doesn't use the network.
+
+Where to look afterwards: `raw/` (the downloads and their unzipped folders, plus `raw/manifest.json`), `staging/`
+(the cleaned files and `data_quality_report.csv`), and schema `v2` in the database.
+
+**To wipe everything the ETL made and start again** (your `data/` folder, the notebook and your v1 tables are never touched):
+
+```bash
+rm -rf raw staging                                    # the downloads and the cleaned files
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "DROP SCHEMA IF EXISTS v2 CASCADE"'   # Docker database
+```
+
+For the pgAdmin database on 5432, run `DROP SCHEMA IF EXISTS v2 CASCADE;` in pgAdmin's Query Tool on the `postgres`
+database. If `rm` says permission denied (files written by Docker as root), run
+`docker run --rm -v "$PWD":/work -w /work data2001assignments-etl:latest rm -rf /work/raw /work/staging` instead.
 
 ## Transport for NSW (stops and traffic lights)
 
@@ -60,7 +119,10 @@ committed. A source that can't be fetched reports `NOT RUN` with instructions, a
 | `schools` | School intake zones (catchments) | NSW Dept of Education | Future catchments replace current ones, as in v1 |
 | `traffic_lights` | Traffic Lights Location | TfNSW | `asset_type` is `Vehicle` or `Pedestrian` in every release (v1's VEH/PED are mapped to these); rows with typo coordinates keep an empty geometry |
 | `hospitals` | NSW Features of Interest, Health Facilities | NSW Spatial Services | Includes private hospitals and a few ACT ones |
-| `public_amenities`, `crossings` | OpenStreetMap, Geofabrik NSW extract | OpenStreetMap contributors (ODbL) | Mapped points only, like v1; `crossings.is_zebra` matches v1's zebra-only file |
+| `public_amenities`, `crossings` | OpenStreetMap, Geofabrik NSW extract | OpenStreetMap contributors (ODbL) | Mapped points only, like v1; `crossings.is_zebra` covers the old and new zebra tagging (see Limitations) |
+| `mesh_blocks` | Census 2021 mesh block counts, plus the ABS allocation file | ABS | Greater Sydney only (60,881 blocks): dwellings and persons, with each block's SA1 and SA2 |
+| `roads` | OpenStreetMap, the same Geofabrik extract | OpenStreetMap contributors (ODbL) | The walkable road network, for AUO-style walkability (about 150,000 lines) |
+| `daily_living_shops` | OpenStreetMap, the same extract | OpenStreetMap contributors (ODbL) | Supermarkets and convenience stores (including newsagents and petrol stations), as AUO defines them; shops mapped as buildings are included at their centre |
 
 Table names and key columns (`SA2_CODE21`, `USE_ID`, and so on) match the v1 tables, so the scoring
 SQL can be pointed at schema `v2` with few changes. New tables use lower-case `snake_case` columns.
@@ -93,10 +155,20 @@ In `latest` mode each source works out the newest release itself:
 - **AEC** uses a fixed election id in `etl/sources/aec.py` (`EVENT_ID`). Change it after the next federal election.
 - **Geofabrik** and the **TfNSW API** always serve the current file.
 
-Downloads land in `raw/<source>/<date>/`. If the server says a file hasn't changed since the last
+Downloads land in `raw/<source>/<date>/`. A transfer that gets cut off (ABS does this often, and the big
+boundary files rarely finish in one go) is resumed from where it stopped with an HTTP Range request, so
+progress isn't lost. If the server says a file hasn't changed since the last
 run (ETag, or date and size), the old copy is reused. `raw/manifest.json` records URL, retrieval time,
 size and SHA-256 for every file, so a run can be repeated exactly with `--mode pinned`. `raw/` and
 `staging/` are git-ignored.
+
+**Zip files are unzipped first.** Every zip a source delivers (the SA2 boundaries, the school
+catchments, the GTFS feed) is unzipped into a folder beside it before anything is read, so
+`raw/asgs_sa2/2026-09-25/SA2_2021_AUST_SHP_GDA2020.zip` also gives you
+`raw/asgs_sa2/2026-09-25/SA2_2021_AUST_SHP_GDA2020/` with the shapefile inside. The zip is kept, so its checksum can
+still be checked, and a zip inside a zip is unzipped too. An earlier extraction is reused, and a file that would
+land outside its folder (a path containing `..`) is refused. Together the three zips unzip to about 1.5 GB, most of
+it the GTFS feed's `shapes.txt` (about 1 GB).
 
 Because the sources keep changing, a `latest` run gives different numbers over time. Use `pinned`
 mode when you need a repeatable result, and keep the manifest with any results you publish.
@@ -155,6 +227,10 @@ docker compose run --rm --no-deps --entrypoint python etl -m pytest tests -q
   terms for a derived database. The AEC and NSW Spatial Services licences weren't confirmed, so the
   manifest says "not verified".
 - **OSM nodes only.** Toilets or crossings mapped as areas or lines aren't counted, as in v1.
+- **Roads leave out footpaths.** The walkable network uses residential, unclassified, living, tertiary,
+  secondary, primary, trunk and pedestrian streets, as AUO's "walkable road network that excluded highways
+  and freeways" does. Footways and paths (mostly sidewalks beside a road) and service roads are left out, so
+  a few places that are joined only by a footpath or a laneway look less connected than they are.
 - **Zebra crossing counts aren't comparable with v1.** v1 counted nodes tagged `crossing=zebra`
   (1,825 in May 2024). Mappers have since moved to `crossing=uncontrolled` plus `crossing:markings=zebra`,
   so only about 700 nodes still carry the old tag, while about 8,000 carry the new one. `is_zebra`
