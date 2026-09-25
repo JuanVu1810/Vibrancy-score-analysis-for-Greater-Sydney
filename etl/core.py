@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import time
 import zipfile
 from dataclasses import dataclass, field
@@ -29,6 +30,8 @@ PARSER_VERSION = "1"  # bump when a parser's output changes, so old manifests ar
 # Bounding boxes (minx, miny, maxx, maxy, degrees) for sanity checks. NSW reaches east to Lord Howe Island.
 NSW_BBOX = (140.0, -38.0, 160.0, -27.0)
 AU_BBOX = (112.0, -45.0, 160.0, -9.0)
+# Greater Sydney with a margin of about 3 km, for reading only the Sydney part of large OpenStreetMap layers.
+SYDNEY_BBOX = (149.9, -34.4, 151.7, -32.9)
 
 
 class EtlError(Exception):
@@ -53,6 +56,35 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def extract_zip(path: Path) -> Path:
+    """Unzip `path` into a folder next to it named after it, and return that folder.
+
+    raw/<source>/<date>/name.zip becomes raw/<source>/<date>/name/. Zips inside it are unzipped too, each
+    into a folder beside it. An earlier extraction of the same zip is reused. A file in the zip that would
+    land outside the folder (a path with "..") is refused. The zip itself is kept, so its checksum can
+    still be checked.
+    """
+    dest = path.with_suffix("")
+    stamp = f"{path.stat().st_size}:{int(path.stat().st_mtime)}"
+    marker = dest / ".unzipped"
+    if marker.exists() and marker.read_text() == stamp:
+        return dest
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    root = dest.resolve()
+    with zipfile.ZipFile(path) as z:
+        for member in z.infolist():
+            target = (root / member.filename).resolve()
+            if root != target and root not in target.parents:
+                raise EtlError(f"{path.name}: refusing to unzip {member.filename!r}, which would land outside {dest.name}/")
+        z.extractall(dest)
+    for inner in sorted(dest.rglob("*.zip")):
+        extract_zip(inner)
+    marker.write_text(stamp)
+    return dest
 
 
 def rel(path: Path) -> str:
@@ -158,6 +190,12 @@ class Snapshot:
     def path(self, name: str = "main") -> Path:
         return ROOT / self.files[name]["path"]
 
+    def unzip(self, name: str = "main") -> Path:
+        """The folder a zip file was unzipped into (unzipping it first if that hasn't been done)."""
+        folder = extract_zip(self.path(name))
+        self.extra.setdefault("unzipped_to", {})[name] = rel(folder)
+        return folder
+
     def to_record(self) -> dict:
         return {"release": self.release, "url": self.url, "retrieved_at": self.retrieved_at,
                 "files": self.files, "extra": self.extra}
@@ -237,45 +275,67 @@ class Ctx:
         return bool(mod and prev.get("last_modified") and mod == prev["last_modified"]
                     and size and str(prev["bytes"]) == size)
 
-    def fetch_to(self, url: str, dest: Path, headers: dict | None = None, attempts: int = 4) -> dict:
+    def fetch_to(self, url: str, dest: Path, headers: dict | None = None, stalls_allowed: int = 4) -> dict:
         """Stream `url` into `dest` and return its checksum, size and server details.
 
-        Some servers (ABS in particular) cut a transfer short now and then, so an interrupted or
-        incomplete download is retried. Zip and Excel files are also checked to be readable zips.
+        Some servers (ABS in particular) cut a transfer short now and then, and the bigger the file the
+        likelier it is. An interrupted download is therefore resumed from where it stopped (an HTTP Range
+        request), and only gives up after `stalls_allowed` attempts in a row that get no further. Zip and
+        Excel files are also checked to be readable zips.
         """
         dest.parent.mkdir(parents=True, exist_ok=True)
         part = dest.with_suffix(dest.suffix + ".part")
-        for attempt in range(1, attempts + 1):
+        part.unlink(missing_ok=True)  # a leftover from an earlier run may be from a different version of the file
+        total, first, stalls = None, None, 0
+        while True:
+            have = part.stat().st_size if part.exists() else 0
+            request_headers = {**(headers or {}), "Accept-Encoding": "identity"}  # so bytes on the wire are file bytes
+            if have:
+                request_headers["Range"] = f"bytes={have}-"
             try:
-                with self.session.get(url, headers=headers, stream=True, timeout=(15, 120)) as r:
+                with self.session.get(url, headers=request_headers, stream=True, timeout=(15, 120)) as r:
                     if r.status_code in (401, 403):
                         raise EtlError(f"{url} answered {r.status_code} (access denied; check the "
                                        f"credential, or download the file by hand)")
-                    r.raise_for_status()
-                    h, size = hashlib.sha256(), 0
-                    with open(part, "wb") as f:
-                        for chunk in r.iter_content(1 << 20):
-                            f.write(chunk)
-                            h.update(chunk)
-                            size += len(chunk)
-                    expected = r.headers.get("Content-Length")
-                    if (expected and expected.isdigit() and int(expected) != size
-                            and not r.headers.get("Content-Encoding")):
-                        raise _Incomplete(f"got {size} of {expected} bytes")
-                    if dest.suffix.lower() in (".zip", ".xlsx", ".xlsm") and not zipfile.is_zipfile(part):
-                        raise _Incomplete("the file is not a complete zip")
-                    meta = {"sha256": h.hexdigest(), "bytes": size, "final_url": r.url,
-                            "etag": r.headers.get("ETag"), "last_modified": r.headers.get("Last-Modified")}
-                part.replace(dest)
-                return meta
+                    if r.status_code == 416 and have:  # nothing left to send: the part may already be whole
+                        pass
+                    else:
+                        r.raise_for_status()
+                        if have and r.status_code == 200:  # the server ignored the Range header: start again
+                            part.unlink(missing_ok=True)
+                            have = 0
+                        first = first or r
+                        length = r.headers.get("Content-Length")
+                        if r.status_code == 206 and "/" in r.headers.get("Content-Range", ""):
+                            total = int(r.headers["Content-Range"].rsplit("/", 1)[1]) if \
+                                r.headers["Content-Range"].rsplit("/", 1)[1].isdigit() else total
+                        elif length and length.isdigit():
+                            total = int(length)
+                        with open(part, "ab" if have else "wb") as f:
+                            for chunk in r.iter_content(1 << 16):  # small chunks, so little is lost when a connection drops
+                                f.write(chunk)
+                size = part.stat().st_size
+                if total is not None and size != total:
+                    raise _Incomplete(f"got {size} of {total} bytes")
+                if dest.suffix.lower() in (".zip", ".xlsx", ".xlsm") and not zipfile.is_zipfile(part):
+                    part.unlink(missing_ok=True)  # damaged, so resuming won't help: start again
+                    raise _Incomplete("the file is not a complete zip")
+                break
             except (requests.exceptions.ChunkedEncodingError, requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout, _Incomplete) as e:
-                part.unlink(missing_ok=True)
-                if attempt == attempts:
+                grew = (part.stat().st_size if part.exists() else 0) > have
+                stalls = 0 if grew else stalls + 1
+                if stalls >= stalls_allowed:
+                    part.unlink(missing_ok=True)
                     raise EtlError(f"{dest.name}: download kept failing ({type(e).__name__}: {e})") from e
-                self.log(f"  {dest.name}: interrupted ({type(e).__name__}), trying again ({attempt}/{attempts - 1})")
-                time.sleep(2 * attempt)
-        raise AssertionError("unreachable")
+                mb = (part.stat().st_size if part.exists() else 0) / 1e6
+                self.log(f"  {dest.name}: interrupted at {mb:.0f} MB ({type(e).__name__}), resuming")
+                time.sleep(2)
+        digest = sha256_file(part)
+        part.replace(dest)
+        h = first.headers if first is not None else {}
+        return {"sha256": digest, "bytes": dest.stat().st_size, "final_url": first.url if first is not None else url,
+                "etag": h.get("ETag"), "last_modified": h.get("Last-Modified")}
 
     def download(self, source_id: str, name: str, url: str, filename: str | None = None,
                  headers: dict | None = None) -> dict:

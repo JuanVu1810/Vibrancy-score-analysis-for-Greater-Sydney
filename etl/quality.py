@@ -19,6 +19,9 @@ import pandas as pd
 # The columns that identify a row in each table, used to count duplicates.
 KEYS = {
     "sa2_boundaries": ["SA2_CODE21"],
+    "mesh_blocks": ["MB_CODE21"],
+    "roads": ["osm_id"],
+    "daily_living_shops": ["osm_id"],
     "businesses": ["industry_code", "SA2_CODE21"],
     "income": ["SA2_CODE21"],
     "population": ["SA2_CODE21"],

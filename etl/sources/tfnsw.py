@@ -9,10 +9,8 @@ hours on 25 Sep 2026, then stopped), so each source tries its routes in order an
 """
 from __future__ import annotations
 
-import io
 import os
 import re
-import zipfile
 from datetime import date, datetime
 from pathlib import Path
 
@@ -111,34 +109,26 @@ def fetch_stops(ctx) -> Snapshot:
         f"(free at opendata.transport.nsw.gov.au), or save the zip from {GTFS_PAGE} into raw/manual/gtfs/")
 
 
-def _stops_from_zip(data, depth: int = 0) -> list:
-    """Every stops.txt in a GTFS zip, including zips nested inside it (one per mode in some bundles)."""
-    frames = []
-    with zipfile.ZipFile(data) as z:
-        for name in z.namelist():
-            base = name.rsplit("/", 1)[-1].lower()
-            if base == "stops.txt":
-                with z.open(name) as f:
-                    frames.append(pd.read_csv(f, dtype=str, keep_default_na=False, encoding="utf-8-sig"))
-            elif base.endswith(".zip") and depth < 2:
-                frames += _stops_from_zip(io.BytesIO(z.read(name)), depth + 1)
-    return frames
+def _stops_from_folder(folder: Path) -> list:
+    """Every stops.txt in an unzipped GTFS download (some bundles hold one zip per mode, unzipped inside it)."""
+    return [pd.read_csv(f, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+            for f in sorted(folder.rglob("*")) if f.is_file() and f.name.lower() == "stops.txt"]
 
 
-def _feed_release(path) -> str | None:
-    with zipfile.ZipFile(path) as z:
-        for name in z.namelist():
-            if name.rsplit("/", 1)[-1].lower() == "feed_info.txt":
-                info = pd.read_csv(z.open(name), dtype=str, keep_default_na=False, encoding="utf-8-sig")
-                if len(info):
-                    row = info.iloc[0]
-                    return "feed " + " ".join(str(row[c]) for c in ("feed_version", "feed_start_date")
-                                              if c in info.columns and row[c])
+def _feed_release(folder: Path) -> str | None:
+    for f in sorted(folder.rglob("*")):
+        if f.is_file() and f.name.lower() == "feed_info.txt":
+            info = pd.read_csv(f, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+            if len(info):
+                row = info.iloc[0]
+                return "feed " + " ".join(str(row[c]) for c in ("feed_version", "feed_start_date")
+                                          if c in info.columns and row[c])
     return None
 
 
 def parse_stops(snap: Snapshot) -> dict:
-    frames = _stops_from_zip(snap.path())
+    folder = snap.unzip()
+    frames = _stops_from_folder(folder)
     if not frames:
         raise MissingCredential(f"no stops.txt found in {snap.files['main']['path']}")
     raw = pd.concat(frames, ignore_index=True).drop_duplicates("stop_id").reset_index(drop=True)
@@ -157,7 +147,7 @@ def parse_stops(snap: Snapshot) -> dict:
     df["wheelchair_boarding"] = pd.array([to_int(v) for v in (raw["wheelchair_boarding"] if "wheelchair_boarding" in raw else [""] * len(raw))],
                                          dtype="Int64")
     df["platform_code"] = text("platform_code")
-    snap.release = _feed_release(snap.path()) or f"retrieved {snap.retrieved_at[:10]}"
+    snap.release = _feed_release(folder) or f"retrieved {snap.retrieved_at[:10]}"
     snap.extra.update(stops=len(df), stations=int((df["location_type"] == 1).sum()))
     return {"stops": gpd.GeoDataFrame(df, geometry=geom, crs=4326).rename_geometry("geom")}
 

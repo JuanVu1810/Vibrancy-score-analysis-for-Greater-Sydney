@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import zipfile
 
 import geopandas as gpd
 import pandas as pd
@@ -35,8 +34,8 @@ def fetch_catchments(ctx) -> Snapshot:
     return Snapshot("catchments", "unknown", url, {"main": rec}, {"catalogue_modified": modified})
 
 
-def _read_zipped(path, member: str) -> gpd.GeoDataFrame:
-    gdf = gpd.read_file(f"/vsizip/{path}/{member}")
+def _read_shapefile(folder, member: str) -> gpd.GeoDataFrame:
+    gdf = gpd.read_file(folder / member)
     gdf = gdf.to_crs(epsg=4326)
     missing = [c for c in _KEEP if c not in gdf.columns]
     if missing:
@@ -48,12 +47,11 @@ def parse_catchments(snap: Snapshot) -> dict:
     """Primary and secondary catchments stacked. Where a school also has a future catchment, its
     future catchment(s) replace the current one, as in the v1 notebook. A school with two future
     polygons keeps both, and future catchments for schools with no current one are left out."""
-    path = snap.path()
-    primary = _read_zipped(path, "catchments_primary.shp")
-    secondary = _read_zipped(path, "catchments_secondary.shp")
-    future = _read_zipped(path, "catchments_future.shp")
-    with zipfile.ZipFile(path) as z:
-        info = json.loads(z.read("catchment_sf_info.json"))
+    folder = snap.unzip()
+    primary = _read_shapefile(folder, "catchments_primary.shp")
+    secondary = _read_shapefile(folder, "catchments_secondary.shp")
+    future = _read_shapefile(folder, "catchments_future.shp")
+    info = json.loads((folder / "catchment_sf_info.json").read_text(encoding="utf-8"))
 
     present = pd.concat([primary, secondary], ignore_index=True)
     replaced = present["USE_ID"].isin(future["USE_ID"])
