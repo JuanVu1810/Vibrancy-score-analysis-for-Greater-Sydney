@@ -1,15 +1,10 @@
 """Transport for NSW sources: GTFS stops and traffic lights.
 
-Both come from the TfNSW Open Data Hub. Its website sometimes refuses scripted downloads (it did for
-hours on 25 Sep 2026, then stopped), so each source tries its routes in order and says what to do if all fail:
-
-  GTFS stops:      the API with TFNSW_API_KEY (register free at https://opendata.transport.nsw.gov.au),
-                   then the public download link, then a zip saved into raw/manual/gtfs/.
-  Traffic lights:  the file listed in the Data.NSW catalogue, then a file saved into raw/manual/traffic_lights/.
+The files are saved by download_data.py: the GTFS zip through the TfNSW API (or the public link), and the traffic lights
+spreadsheet from the Data.NSW catalogue (saved by hand if the site blocks scripts).
 """
 from __future__ import annotations
 
-import os
 import re
 from datetime import date, datetime
 from pathlib import Path
@@ -17,28 +12,10 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import requests
 from openpyxl import load_workbook
 from shapely.geometry import Point
 
-from ..core import (AU_BBOX, MANUAL, NSW_BBOX, EtlError, MissingCredential, Snapshot, Source, error,
-                    to_int, warn)
-
-GTFS_API = "https://api.transport.nsw.gov.au/v1/publictransport/timetables/complete/gtfs"
-GTFS_PAGE = "https://opendata.transport.nsw.gov.au/dataset/timetables-complete-gtfs"
-GTFS_CKAN = "https://opendata.transport.nsw.gov.au/data/api/3/action/package_show"
-GTFS_PORTAL_ZIP = ("https://opendata.transport.nsw.gov.au/data/dataset/d1f68d4f-b778-44df-9823-cf2fa922e47f/"
-                   "resource/67974f14-01bf-47b7-bfa5-c7f2f8a950ca/download/full_greater_sydney_gtfs_static_0.zip")
-LIGHTS_PAGE = "https://www.data.nsw.gov.au/data/dataset/2-traffic-lights-location"
-LIGHTS_CKAN = "https://data.nsw.gov.au/data/api/3/action/package_show"
-LIGHTS_DATASET = "2-traffic-lights-location"
-
-_MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december"
-
-
-def _newest(folder: Path, patterns: tuple) -> Path | None:
-    files = [p for pat in patterns for p in folder.glob(pat)] if folder.exists() else []
-    return max(files, key=lambda p: p.stat().st_mtime) if files else None
+from ..core import AU_BBOX, NSW_BBOX, EtlError, Snapshot, Source, error, to_int, warn
 
 
 def _points(lon, lat, box, ids, snap):
@@ -69,46 +46,6 @@ def _check_placed(gdf, label: str) -> list:
     return [warn(f"{missing} {label} have unusable coordinates and are kept with an empty geometry (their ids are in the manifest)")]
 
 
-# =============================================================================================
-# GTFS stops
-# =============================================================================================
-def _portal_gtfs_url(ctx) -> str:
-    """The current 'GTFS Timetables Complete' zip from the portal catalogue (the last known link if it can't be read)."""
-    try:
-        r = ctx.get(GTFS_CKAN, params={"id": "timetables-complete-gtfs"})
-        r.raise_for_status()
-        return next(x["url"] for x in r.json()["result"]["resources"]
-                    if x["url"].lower().endswith(".zip") and "gtfs" in x["url"].lower())
-    except (requests.RequestException, ValueError, KeyError, StopIteration):
-        return GTFS_PORTAL_ZIP
-
-
-def fetch_stops(ctx) -> Snapshot:
-    key = os.environ.get("TFNSW_API_KEY", "").strip()
-    tried = []
-    if key:  # the documented programmatic route; the key is sent as a header and never recorded
-        try:
-            rec = ctx.download("gtfs_stops", "main", GTFS_API, filename="complete_gtfs.zip",
-                               headers={"Authorization": f"apikey {key}", "Accept": "application/octet-stream"})
-            return Snapshot("gtfs_stops", "unknown", GTFS_API, {"main": rec})
-        except EtlError as e:
-            tried.append(f"API: {e}")
-            ctx.log("  gtfs_stops: the API route failed, trying the public download link")
-    url = _portal_gtfs_url(ctx)
-    try:
-        rec = ctx.download("gtfs_stops", "main", url, filename=url.rsplit("/", 1)[-1])
-        return Snapshot("gtfs_stops", "unknown", url, {"main": rec})
-    except EtlError as e:
-        tried.append(f"portal link: {e}")
-    manual = _newest(MANUAL / "gtfs", ("*.zip",))
-    if manual:
-        rec = ctx.adopt("gtfs_stops", "main", manual)
-        return Snapshot("gtfs_stops", "unknown", rec["url"], {"main": rec})
-    raise MissingCredential(
-        "gtfs_stops could not be downloaded (" + "; ".join(tried) + "). Set TFNSW_API_KEY in .env "
-        f"(free at opendata.transport.nsw.gov.au), or save the zip from {GTFS_PAGE} into raw/manual/gtfs/")
-
-
 def _stops_from_folder(folder: Path) -> list:
     """Every stops.txt in an unzipped GTFS download (some bundles hold one zip per mode, unzipped inside it)."""
     return [pd.read_csv(f, dtype=str, keep_default_na=False, encoding="utf-8-sig")
@@ -130,7 +67,7 @@ def parse_stops(snap: Snapshot) -> dict:
     folder = snap.unzip()
     frames = _stops_from_folder(folder)
     if not frames:
-        raise MissingCredential(f"no stops.txt found in {snap.files['main']['path']}")
+        raise EtlError(f"no stops.txt found in {snap.files['main']['path']}")
     raw = pd.concat(frames, ignore_index=True).drop_duplicates("stop_id").reset_index(drop=True)
     lat = pd.to_numeric(raw["stop_lat"], errors="coerce")
     lon = pd.to_numeric(raw["stop_lon"], errors="coerce")
@@ -190,41 +127,7 @@ def _read_lights(path: Path) -> pd.DataFrame:
                 cols = [_snake(c) if c is not None else f"col{j}" for j, c in enumerate(r)]
                 body = [["" if v is None else v for v in row] for row in rows[i + 1:] if any(v is not None for v in row)]
                 return pd.DataFrame(body, columns=cols)
-    raise MissingCredential(f"{path.name}: no sheet with 'Latitude' and 'Longitude' columns")
-
-
-def _lights_resource(ctx) -> tuple:
-    """(url, catalogue modified date) of the spreadsheet listed in the Data.NSW catalogue."""
-    r = ctx.get(LIGHTS_CKAN, params={"id": LIGHTS_DATASET})
-    r.raise_for_status()
-    result = r.json()["result"]
-    url = next(x["url"] for x in result["resources"] if x["url"].lower().split("?")[0].endswith((".xlsx", ".csv")))
-    return url, (result.get("metadata_modified") or "")[:10]
-
-
-def _release_from_name(name: str, fallback: str) -> str:
-    m = re.search(rf"({_MONTHS})[-_ ]?(\d{{4}})", name, re.I)
-    return f"{m.group(1).capitalize()} {m.group(2)}" if m else fallback
-
-
-def fetch_lights(ctx) -> Snapshot:
-    problem = ""
-    try:
-        url, modified = _lights_resource(ctx)
-        name = url.rsplit("/", 1)[-1]
-        rec = ctx.download("traffic_lights", "main", url, filename=name)
-        return Snapshot("traffic_lights", _release_from_name(name, f"catalogue updated {modified}"), url,
-                        {"main": rec}, {"catalogue_modified": modified})
-    except (EtlError, requests.RequestException, ValueError, KeyError, StopIteration) as e:
-        problem = str(e)
-    src = _newest(MANUAL / "traffic_lights", ("*.xlsx", "*.xlsm", "*.csv"))
-    if src is None:
-        raise MissingCredential(
-            f"traffic_lights could not be downloaded ({problem}). Save the spreadsheet from {LIGHTS_PAGE} "
-            "into raw/manual/traffic_lights/")
-    ctx.log("  traffic_lights: download failed, using the file in raw/manual/traffic_lights/")
-    rec = ctx.adopt("traffic_lights", "main", src)
-    return Snapshot("traffic_lights", _release_from_name(src.name, "manual file"), LIGHTS_PAGE, {"main": rec})
+    raise EtlError(f"{path.name}: no sheet with 'Latitude' and 'Longitude' columns")
 
 
 def parse_lights(snap: Snapshot) -> dict:
@@ -262,7 +165,7 @@ def check_lights(out: dict, ctx) -> list:
 
 SOURCES = [
     Source("gtfs_stops", "TfNSW Timetables Complete GTFS (stops.txt)", "CC BY (TfNSW Open Data)",
-           "Transport for NSW", ("stops",), fetch_stops, parse_stops, check_stops),
+           "Transport for NSW", ("stops",), parse_stops, check_stops),
     Source("traffic_lights", "TfNSW Traffic Lights Location", "CC BY (Data.NSW)", "Transport for NSW",
-           ("traffic_lights",), fetch_lights, parse_lights, check_lights),
+           ("traffic_lights",), parse_lights, check_lights),
 ]

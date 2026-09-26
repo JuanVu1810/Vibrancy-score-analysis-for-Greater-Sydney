@@ -9,8 +9,7 @@ from shapely.geometry import Point
 
 from ..core import NSW_BBOX, Snapshot, Source, error, inside, to_int, warn
 
-# The tally room path is keyed by the election's event id: 31496 is the 2025 federal election
-# (24310 was 2019). Change it when there is a newer federal election.
+# The election's event id, used in the release name: 31496 is the 2025 federal election.
 EVENT_ID = 31496
 URL = f"https://results.aec.gov.au/{EVENT_ID}/Website/Downloads/GeneralPollingPlacesDownload-{EVENT_ID}.csv"
 
@@ -21,11 +20,6 @@ _RENAME = {"State": "state", "DivisionID": "division_id", "DivisionNm": "divisio
            "PremisesAddress3": "premises_address_3", "PremisesSuburb": "premises_suburb",
            "PremisesPostCode": "premises_post_code"}
 _INT = ["division_id", "polling_place_id", "polling_place_type_id", "premises_post_code"]
-
-
-def fetch(ctx) -> Snapshot:
-    rec = ctx.download("polling_places", "main", URL)
-    return Snapshot("polling_places", f"federal election, event {EVENT_ID}", URL, {"main": rec})
 
 
 def parse(snap: Snapshot) -> dict:
@@ -66,5 +60,5 @@ def check(out: dict, ctx) -> list:
 
 SOURCES = [
     Source("polling_places", "AEC federal election polling places", "not verified (AEC)",
-           "Australian Electoral Commission", ("polling_places",), fetch, parse, check),
+           "Australian Electoral Commission", ("polling_places",), parse, check),
 ]

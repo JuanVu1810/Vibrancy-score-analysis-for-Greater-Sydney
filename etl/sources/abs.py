@@ -3,14 +3,12 @@
 The three statistical tables are Excel workbooks with a few title rows above the data, and their
 layout differs slightly between releases. The parsers therefore find their header rows by content
 and take the newest year in the workbook, so a new release is picked up without code changes.
-The same parsers read older releases, which is how `verify --parity` checks them against data/.
 """
 from __future__ import annotations
 
 import re
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urljoin
 
 import geopandas as gpd
 import pandas as pd
@@ -27,21 +25,10 @@ ATTRIBUTION = "Australian Bureau of Statistics"
 GS_SA2_COUNT = 373  # SA2s in Greater Sydney, ASGS Edition 3 (2021)
 
 
-def find_link(html: str, pattern: str) -> str | None:
-    """First href on a page whose URL contains the regex `pattern`, as an absolute URL."""
-    m = re.search(r'href="([^"]*' + pattern + r'[^"]*)"', html)
-    return urljoin(ABS, m.group(1)) if m else None
-
-
 def _null_int(series) -> pd.Series:
     return pd.array([to_int(v) for v in series], dtype="Int64")
 
 
-# =============================================================================================
-# SA2 boundaries
-# =============================================================================================
-SA2_ZIP = (f"{ABS}/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/"
-           "jul2021-jun2026/access-and-downloads/digital-boundary-files/SA2_2021_AUST_SHP_GDA2020.zip")
 _SA2_INT = ["SA2_CODE21", "CHG_FLAG21", "SA3_CODE21", "SA4_CODE21", "STE_CODE21"]
 _SA2_COLS = ["SA2_CODE21", "SA2_NAME21", "CHG_FLAG21", "CHG_LBL21", "SA3_CODE21", "SA3_NAME21",
              "SA4_CODE21", "SA4_NAME21", "GCC_CODE21", "GCC_NAME21", "STE_CODE21", "STE_NAME21",
@@ -58,11 +45,6 @@ def the_shapefile(folder: Path) -> Path:
 
 def to_multipolygon(geom):
     return MultiPolygon([geom]) if geom is not None and geom.geom_type == "Polygon" else geom
-
-
-def fetch_sa2(ctx) -> Snapshot:
-    rec = ctx.download("asgs_sa2", "main", SA2_ZIP, filename="SA2_2021_AUST_SHP_GDA2020.zip")
-    return Snapshot("asgs_sa2", "ASGS Edition 3 (2021)", SA2_ZIP, {"main": rec})
 
 
 def parse_sa2(snap: Snapshot) -> dict:
@@ -100,23 +82,6 @@ BUSINESS_COLS = ["industry_code", "industry_name", "SA2_CODE21", "sa2_name", "0_
                  "50k_to_200k_businesses", "200k_to_2m_businesses", "2m_to_5m_businesses",
                  "5m_to_10m_businesses", "10m_or_more_businesses", "total_businesses"]
 INDUSTRIES = set("ABCDEFGHIJKLMNOPQRS")  # ANZSIC divisions; 'X' (currently unknown) is dropped
-
-
-def fetch_business(ctx) -> Snapshot:
-    """Newest release that has the SA2 turnover cube. The SA2 cubes of the newest release come
-    out months after its headline numbers, so walk back through the earlier releases."""
-    year = datetime.now().year
-    slugs = ["latest-release"] + [f"jul{y - 4}-jun{y}" for y in range(year + 1, 2021, -1)]
-    for slug in slugs:
-        page = f"{CABEE}/{slug}"
-        r = ctx.get(page)
-        if r.status_code != 200:
-            continue
-        link = find_link(r.text, r"8165DC09(?:_revised)?\.xlsx")
-        if link:
-            rec = ctx.download("abs_business", "main", link)
-            return Snapshot("abs_business", "unknown", link, {"main": rec}, {"release_page": page})
-    raise EtlError("abs_business: no release page offers the SA2 by turnover cube (data cube 9)")
 
 
 def business_sheet(wb):
@@ -197,26 +162,10 @@ def check_business(out: dict, ctx) -> list:
     return issues
 
 
-# =============================================================================================
-# Income (Personal Income in Australia, Table 1: total income, SA2 sheet)
-# =============================================================================================
-INCOME_PAGE = f"{ABS}/statistics/labour/earnings-and-working-conditions/personal-income-australia/latest-release"
 INCOME_COLS = ["SA2_CODE21", "sa2_name", "earners", "median_age", "median_income", "mean_income"]
 # ABS group headings above the yearly columns -> our column names
 _INCOME_GROUPS = (("Earners", "earners"), ("Median age", "median_age"),
                   ("Median (", "median_income"), ("Mean (", "mean_income"))
-
-
-def fetch_income(ctx) -> Snapshot:
-    r = ctx.get(INCOME_PAGE)
-    r.raise_for_status()
-    link = find_link(r.text, r"Table%201%20-%20Total%20income")
-    if not link:
-        raise EtlError("abs_income: 'Table 1 - Total income' not found on the latest release page")
-    rec = ctx.download("abs_income", "main", link, filename="personal_income_table1.xlsx")
-    m = re.search(r"personal-income-australia/([\d-]+)/", link)
-    return Snapshot("abs_income", m.group(1) if m else "unknown", link, {"main": rec},
-                    {"release_page": INCOME_PAGE})
 
 
 def parse_income_ws(ws, year: str | None = None) -> tuple:
@@ -271,24 +220,9 @@ def check_income(out: dict, ctx) -> list:
     return issues
 
 
-# =============================================================================================
-# Population (Regional population by age and sex, SA2, persons)
-# =============================================================================================
-POP_PAGE = f"{ABS}/statistics/people/population/regional-population-age-and-sex/latest-release"
 AGE_COLS = ["0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49",
             "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80-84", "85-and-over"]
 POP_COLS = ["SA2_CODE21", "sa2_name"] + [f"{a}_people" for a in AGE_COLS] + ["total_people"]
-
-
-def fetch_population(ctx) -> Snapshot:
-    r = ctx.get(POP_PAGE)
-    r.raise_for_status()
-    link = find_link(r.text, r"32350DS0001_\d{4}\.xlsx")
-    if not link:
-        raise EtlError("abs_population: the SA2 by age workbook (32350DS0001) was not found")
-    year = re.search(r"32350DS0001_(\d{4})", link).group(1)
-    rec = ctx.download("abs_population", "main", link)
-    return Snapshot("abs_population", f"30 June {year}", link, {"main": rec}, {"release_page": POP_PAGE})
 
 
 def _age_label(label) -> str | None:
@@ -366,18 +300,6 @@ def check_population(out: dict, ctx) -> list:
     return issues
 
 
-# =============================================================================================
-# Mesh block dwellings need the ABS download location of the allocation file, defined here
-# =============================================================================================
-ASGS_DOWNLOADS = (f"{ABS}/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/"
-                  "jul2021-jun2026/access-and-downloads")
-
-
-# =============================================================================================
-# Mesh blocks: 2021 Census dwellings and persons, with the SA1 and SA2 each block belongs to
-# =============================================================================================
-MB_PAGE = f"{ABS}/census/guide-census-data/mesh-block-counts/2021"
-MB_ALLOCATION = f"{ASGS_DOWNLOADS}/allocation-files/MB_2021_AUST.xlsx"
 MB_COLS = ["MB_CODE21", "category", "area_sqkm", "dwellings", "persons", "SA1_CODE21", "SA2_CODE21"]
 
 
@@ -387,18 +309,6 @@ def _find(header: list, pattern: str) -> int:
         if h is not None and re.search(pattern, str(h).strip(), re.I):
             return i
     raise EtlError(f"no column matching {pattern!r} in {header}")
-
-
-def fetch_mesh_blocks(ctx) -> Snapshot:
-    r = ctx.get(MB_PAGE)
-    r.raise_for_status()
-    link = find_link(r.text, r"Mesh%20Block%20Counts[^\"]*\.xlsx")
-    if not link:
-        raise EtlError("abs_mesh_blocks: the mesh block counts workbook was not found on its page")
-    counts = ctx.download("abs_mesh_blocks", "counts", link, filename="mesh_block_counts_2021.xlsx")
-    alloc = ctx.download("abs_mesh_blocks", "allocation", MB_ALLOCATION)
-    return Snapshot("abs_mesh_blocks", "2021 Census counts", link, {"counts": counts, "allocation": alloc},
-                    {"counts_page": MB_PAGE})
 
 
 def parse_mesh_counts_ws(ws) -> pd.DataFrame:
@@ -495,13 +405,13 @@ def check_mesh_blocks(out: dict, ctx) -> list:
 
 SOURCES = [
     Source("asgs_sa2", "SA2 boundaries (ASGS Edition 3, 2021)", LICENCE, ATTRIBUTION,
-           ("sa2_boundaries",), fetch_sa2, parse_sa2, check_sa2),
+           ("sa2_boundaries",), parse_sa2, check_sa2),
     Source("abs_business", "Counts of Australian Businesses (SA2 by industry by turnover)", LICENCE,
-           ATTRIBUTION, ("businesses",), fetch_business, parse_business, check_business),
+           ATTRIBUTION, ("businesses",), parse_business, check_business),
     Source("abs_income", "Personal Income in Australia (SA2, total income)", LICENCE, ATTRIBUTION,
-           ("income",), fetch_income, parse_income, check_income),
+           ("income",), parse_income, check_income),
     Source("abs_population", "Regional population by age and sex (SA2, persons)", LICENCE, ATTRIBUTION,
-           ("population",), fetch_population, parse_population, check_population),
+           ("population",), parse_population, check_population),
     Source("abs_mesh_blocks", "Census 2021 mesh block counts (dwellings, persons) with SA1 and SA2", LICENCE,
-           ATTRIBUTION, ("mesh_blocks",), fetch_mesh_blocks, parse_mesh_blocks, check_mesh_blocks),
+           ATTRIBUTION, ("mesh_blocks",), parse_mesh_blocks, check_mesh_blocks),
 ]

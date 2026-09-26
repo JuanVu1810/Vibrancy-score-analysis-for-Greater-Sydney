@@ -36,9 +36,9 @@ services:
     working_dir: /work
     command: ["bash", "scripts/run.sh"]
 
-  # Downloads the sources and loads them into the "v2" schema:  docker compose run --rm etl
-  # Other commands:  docker compose run --rm etl verify --parity
-  #                  docker compose run --rm --no-deps etl run --no-db   (files only, no database)
+  # Cleans the files in raw/ (from download_data.py) and loads them into the "v2" schema:  docker compose run --rm etl
+  # Other commands:  docker compose run --rm --no-deps etl run --no-db   (files only, no database)
+  # The download step:  docker compose run --rm --no-deps --user "$(id -u):$(id -g)" --entrypoint python etl download_data.py
   etl:
     build: .
     depends_on:

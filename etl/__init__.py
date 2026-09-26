@@ -1,5 +1,5 @@
-"""ETL for the Greater Sydney bustling score: fetch each source, clean it, check it, load it.
+"""ETL for the Greater Sydney vibrancy index: check, clean and load the sources that download_data.py saved.
 
-Run it with  python -m etl run  (see etl/README.md). It never touches data/ or the v1 tables.
+Run it with  python -m etl run  (see etl/README.md). It only writes staging/ and the v2 schema of the database.
 """
 __version__ = "2.0"

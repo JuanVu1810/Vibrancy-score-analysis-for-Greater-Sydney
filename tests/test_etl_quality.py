@@ -57,7 +57,7 @@ def test_record_counts_rows_and_duplicate_keys():
 
 
 def test_assess_gives_one_built_in_record_and_one_pandera_record_per_table():
-    source = Source("abs_business", "t", "l", "a", ("businesses",), None, None, lambda out, ctx: [warn("check")])
+    source = Source("abs_business", "t", "l", "a", ("businesses",), None, lambda out, ctx: [warn("check")])
     records = quality.assess(source, {"businesses": businesses()}, ctx=None)
     assert [r.dataset for r in records] == ["abs_business", "pandera:businesses"]
     assert [r.status for r in records] == ["WARNING", "PASS"]

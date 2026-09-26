@@ -5,33 +5,11 @@ import json
 
 import geopandas as gpd
 import pandas as pd
-import requests
 
 from ..core import NSW_BBOX, EtlError, Snapshot, Source, error, inside, warn
 from .abs import to_multipolygon
 
-# =============================================================================================
-# School catchments
-# =============================================================================================
-CKAN = "https://data.nsw.gov.au/data/api/3/action/package_show"
-CATCH_DATASET = "nsw-education-school-intake-zones-catchment-areas-for-nsw-government-schools"
-CATCH_FALLBACK = ("https://data.nsw.gov.au/data/dataset/8b1e8161-7252-43d9-81ed-6311569cb1d7/resource/"
-                  "32d6f502-ddb1-45d9-b114-5e34ddfd33ac/download/catchments.zip")
 _KEEP = ["USE_ID", "CATCH_TYPE", "USE_DESC"]
-
-
-def fetch_catchments(ctx) -> Snapshot:
-    """Resolve the zip through the Data.NSW catalogue, falling back to the last known URL."""
-    url, modified = CATCH_FALLBACK, None
-    try:
-        r = ctx.get(CKAN, params={"id": CATCH_DATASET})
-        result = r.json()["result"]
-        url = next(x["url"] for x in result["resources"] if x["url"].lower().endswith(".zip"))
-        modified = result.get("metadata_modified")
-    except (requests.RequestException, ValueError, KeyError, StopIteration):
-        ctx.log("  school catchments: catalogue lookup failed, using the last known URL")
-    rec = ctx.download("catchments", "main", url, filename="catchments.zip")
-    return Snapshot("catchments", "unknown", url, {"main": rec}, {"catalogue_modified": modified})
 
 
 def _read_shapefile(folder, member: str) -> gpd.GeoDataFrame:
@@ -45,7 +23,7 @@ def _read_shapefile(folder, member: str) -> gpd.GeoDataFrame:
 
 def parse_catchments(snap: Snapshot) -> dict:
     """Primary and secondary catchments stacked. Where a school also has a future catchment, its
-    future catchment(s) replace the current one, as in the v1 notebook. A school with two future
+    future catchment(s) replace the current one. A school with two future
     polygons keeps both, and future catchments for schools with no current one are left out."""
     folder = snap.unzip()
     primary = _read_shapefile(folder, "catchments_primary.shp")
@@ -85,35 +63,6 @@ def check_catchments(out: dict, ctx) -> list:
     return issues
 
 
-# =============================================================================================
-# Hospitals (NSW Features of Interest, Health Facilities, layer 1)
-# =============================================================================================
-HOSPITAL_LAYER = ("https://portal.spatial.nsw.gov.au/server/rest/services/NSW_FOI_Health_Facilities/"
-                  "MapServer/1")
-_PAGE = 1000
-
-
-def fetch_hospitals(ctx) -> Snapshot:
-    """Page through the ArcGIS layer as GeoJSON (WGS84)."""
-    features, offset = [], 0
-    while True:
-        r = ctx.get(f"{HOSPITAL_LAYER}/query", params={
-            "where": "1=1", "outFields": "topoid,generalname,alternativelabel,classsubtype,operationalstatus",
-            "returnGeometry": "true", "outSR": 4326, "f": "geojson", "orderByFields": "objectid",
-            "resultOffset": offset, "resultRecordCount": _PAGE})
-        r.raise_for_status()
-        page = r.json()
-        if "error" in page:
-            raise EtlError(f"hospitals: the service returned an error: {page['error']}")
-        features += page["features"]
-        if not (page.get("exceededTransferLimit") or page.get("properties", {}).get("exceededTransferLimit")):
-            break
-        offset += _PAGE
-    data = json.dumps({"type": "FeatureCollection", "features": features}).encode("utf-8")
-    rec = ctx.store("hospitals", "main", "hospitals.geojson", data, f"{HOSPITAL_LAYER}/query")
-    return Snapshot("hospitals", f"live service, retrieved {ctx.today}", HOSPITAL_LAYER, {"main": rec})
-
-
 def parse_hospitals(snap: Snapshot) -> dict:
     gdf = gpd.read_file(snap.path())
     if gdf.crs is None:
@@ -138,8 +87,8 @@ def check_hospitals(out: dict, ctx) -> list:
 
 SOURCES = [
     Source("catchments", "NSW school intake zones (catchment areas)", "CC BY (Data.NSW)",
-           "NSW Department of Education", ("schools",), fetch_catchments, parse_catchments, check_catchments),
+           "NSW Department of Education", ("schools",), parse_catchments, check_catchments),
     Source("hospitals", "NSW Features of Interest: Health Facilities (hospitals)",
            "not verified (NSW Spatial Services)", "NSW Spatial Services", ("hospitals",),
-           fetch_hospitals, parse_hospitals, check_hospitals),
+           parse_hospitals, check_hospitals),
 ]

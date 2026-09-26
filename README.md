@@ -552,10 +552,10 @@ committed `index.html` and `images/` instead. The earlier Folium map is still in
 ### Getting fresh data (the v2 ETL)
 
 Everything above runs on the files in `data/`, which are frozen. A separate ETL in [`etl/`](etl/README.md)
-downloads the latest release of every source from its publisher, cleans it, checks it, and loads it
-into a `v2` schema in the same database, without touching `data/` or the tables this analysis uses.
-See [`etl/README.md`](etl/README.md) for how to run it, what it needs (a free Transport for NSW API
-key) and how it recorded where each file came from.
+cleans, checks and loads into a `v2` schema in the same database the source files that
+[`download_data.py`](download_data.py) fetched from each publisher, without touching `data/` or the tables this
+analysis uses. See [`etl/README.md`](etl/README.md) for how to run it, what it needs (optionally a free Transport
+for NSW API key) and how it records where each file came from.
 
 ### How the results are checked
 
