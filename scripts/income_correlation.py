@@ -1,4 +1,4 @@
-"""The income correlation numbers quoted in the README (Results, "Bustling score and median income").
+"""The correlation between the bustling score and median income, with a bootstrap interval and a permutation test.
 
 Reads expected/bustling_scores.csv (the original results) and uses only numpy and pandas.
 The resampling uses a fixed seed, so you get the same numbers every time.

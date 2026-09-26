@@ -244,7 +244,7 @@
         <div><h3>The score is relative</h3>
           <p>Every measure is standardised against these 359 regions. Add or drop regions and every score moves.</p></div>
         <div><h3>It counts density</h3>
-          <p>Measures are per km&sup2; (the polling place input uses a raw count, see the README), so small, packed regions
+          <p>Measures are per km&sup2; (the polling place input uses a raw count), so small, packed regions
              score high almost by construction. It shows where activity is concentrated, not where the most people go.</p></div>
         <div><h3>It hasn't met real crowds</h3>
           <p>Nothing here has been compared with measured pedestrian counts. Use it to shortlist places to look at, not as evidence of footfall.</p></div>
@@ -252,8 +252,6 @@
           <p>Score and median income are only weakly linked (correlation 0.16). Haymarket has the lowest
              median income of all 359 regions, yet ranks #2 for score.</p></div>
       </div>
-      <p class="note">More limits, including our own judgement calls on the weights, are in the
-        <a href="https://github.com/JuanVu1810/Bustling-score-analysis-for-Greater-Sydney#limitations">README</a>.</p>
     </section>
 
     <details class="table" id="table-view">
@@ -275,9 +273,7 @@
 
   <footer>
     <p><strong>Context.</strong> We scored 359 of Greater Sydney’s 373 regions. The 14 excluded regions each have 100 or fewer residents aged 0 to 19 and no more than 507 residents overall. Some score inputs are divided by the population they serve, so very small populations can produce unstable, misleadingly high values. Exclusion does not mean a place is quiet: areas such as Sydney Airport and Port Botany may attract many workers and visitors but have few residents. Excluded regions: Badgerys Creek, Banksmeadow, Blue Mountains - North, Blue Mountains - South, Centennial Park, Holsworthy Military Area, Port Botany Industrial, Prospect Reservoir, Rookwood Cemetery, Royal National Park, Smithfield Industrial, Sydney Airport, Wetherill Park Industrial, Yennora Industrial. The inputs also span different years—polling places 2019, boundaries and traffic lights 2021, and unrecorded dates for others—so treat the score as a broad comparison, not an exact snapshot of one year.</p>
-    <p>How the score works and where it's weak:
-      <a href="https://github.com/JuanVu1810/Bustling-score-analysis-for-Greater-Sydney#how-the-score-works">README</a> &middot;
-      <a href="https://github.com/JuanVu1810/Bustling-score-analysis-for-Greater-Sydney">Source and how to run it</a></p>
+    <p><a href="https://github.com/JuanVu1810/Bustling-score-analysis-for-Greater-Sydney">Source code</a></p>
     <p>Region boundaries &copy; Australian Bureau of Statistics (SA2, 2021 edition). Map by
       <a href="https://leafletjs.com">Leaflet</a>, which loads from a public CDN, so the map needs an internet connection.</p>
   </footer>

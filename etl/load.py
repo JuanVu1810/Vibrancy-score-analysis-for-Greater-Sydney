@@ -1,4 +1,4 @@
-"""Load the cleaned tables into PostGIS, in a schema of their own (v2), so any other tables in the database stay untouched."""
+"""Load the cleaned tables into PostGIS, in a schema of their own (vibrancy), so any other tables in the database stay untouched."""
 from __future__ import annotations
 
 import json
@@ -12,7 +12,7 @@ from sqlalchemy.engine import URL
 
 from .core import ROOT, utc_now
 
-SCHEMA = "v2"
+SCHEMA = "vibrancy"
 
 # Keys and indexes added after each table is written (name -> SQL statements, {t} is the table).
 _INDEXES = {
@@ -70,7 +70,7 @@ def _comment(source, release: str, retrieved: str) -> str:
 
 def load(tables: dict, table_sources: dict, records: dict, sources_by_id: dict, quality=None, settings: dict | None = None,
          log=print) -> list:
-    """Write `tables` (name -> DataFrame) to schema v2, and every manifest record to v2.etl_manifest.
+    """Write `tables` (name -> DataFrame) to schema vibrancy, and every manifest record to vibrancy.etl_manifest.
 
     `table_sources` maps a table name to its Source, `records` is the whole manifest (source id ->
     record) and `sources_by_id` maps source ids to Sources. Returns (table, problem) pairs for tables

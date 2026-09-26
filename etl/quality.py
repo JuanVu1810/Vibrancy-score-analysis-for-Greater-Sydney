@@ -1,7 +1,7 @@
 """Quality records for the ETL, in the style of the CPI forecast project's validation module.
 
 Every check produces a QualityRecord with a status of PASS, WARNING or FAIL. A run keeps all of its
-records, writes them to staging/data_quality_report.csv and to the v2.data_quality_results table, and
+records, writes them to staging/data_quality_report.csv and to the vibrancy.data_quality_results table, and
 a FAIL stops that source from being written or loaded.
 
 Two layers of checks feed the records:

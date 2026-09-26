@@ -28,7 +28,7 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parent
 RAW = ROOT / "raw"
 MANIFEST = RAW / "manifest.json"
-HEADERS = {"User-Agent": "bustling-score-etl/2.0", "Accept-Encoding": "identity"}  # identity: bytes on the wire = the file
+HEADERS = {"User-Agent": "vibrancy-index-downloader/1.0", "Accept-Encoding": "identity"}  # identity: bytes on the wire = the file
 
 
 def link(url, filename, headers=None):
@@ -86,6 +86,12 @@ SOURCES = {
     "cos_stairs": ("City of Sydney stairs", {"main": link(layer(f"{COS}/Stairs/FeatureServer"), "stairs.geojson")}),
     "cos_mobility_parking": ("City of Sydney mobility parking", {
         "main": link(layer(f"{COS}/Mobility_parking/FeatureServer", 1), "mobility_parking.geojson")}),
+    # Measured pedestrian counts, kept to check the index against: 120 survey sites in 16 SA2s of the inner city, with
+    # the daily average count for each March and October survey since October 2013 (the latest is March 2026).
+    # It is only downloaded: the ETL has no source for it. (The same publisher's "Automatic hourly pedestrian count"
+    # has just 4 counters, all in the CBD, and stops in July 2025, so it cannot be compared across SA2s.)
+    "cos_walking_counts": ("City of Sydney walking count sites and survey averages", {
+        "main": link(layer(f"{COS}/Walking_count_sites_summary/FeatureServer"), "walking_count_sites.geojson")}),
     "polling_places": ("AEC 2025 federal election polling places", {
         "main": link("https://results.aec.gov.au/31496/Website/Downloads/GeneralPollingPlacesDownload-31496.csv",
                      "GeneralPollingPlacesDownload-31496.csv")}),

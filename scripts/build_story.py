@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turn the bustling scores into a short data story: one web page plus the README figures.
+"""Turn the bustling scores into a short data story: one web page plus static figures.
 
     python scripts/build_story.py                     # expected/bustling_scores.csv -> output/
     python scripts/build_story.py --out .             # refresh the committed index.html and images/
@@ -11,7 +11,7 @@ rebuilt from `expected/bustling_scores.csv` alone. The notebook calls `build()` 
 
 Writes to <out>/:
     index.html                     the interactive story (Leaflet map, three charts, table view)
-    images/score_distribution.png  the same four views as static figures for the README
+    images/score_distribution.png  the same four views as static figures
     images/bustling_map.png
     images/distance_from_cbd.png
     images/score_by_income.png
@@ -157,7 +157,7 @@ def compute_stats(g: gpd.GeoDataFrame) -> dict:
     }
 
 
-# --- Static figures (README, and inline in the notebook) ----------------------------------------
+# --- Static figures (and inline in the notebook) ----------------------------------------
 RC = {"font.family": "sans-serif", "font.size": 9, "text.color": INK["ink"],
       "axes.edgecolor": INK["axis"], "figure.facecolor": INK["surface"], "axes.facecolor": INK["surface"]}
 
@@ -540,7 +540,7 @@ def page_html(g: gpd.GeoDataFrame, stats: dict) -> str:
 
 # --- Entry points -------------------------------------------------------------------------------
 def build(scores, out_dir="output", page=True, images=True):
-    """Write the story page and the README figures into out_dir. `scores`: CSV path or DataFrame."""
+    """Write the story page and the static figures into out_dir. `scores`: CSV path or DataFrame."""
     out = Path(out_dir)
     g = load_regions(scores)
     stats = compute_stats(g)
