@@ -4,17 +4,18 @@ This cleans the downloaded source datasets into a consistent shape, checks them,
 not download anything: [`download_data.py`](../download_data.py) does that first. Every source has a documented
 publisher, a licence, and a record of exactly which file was used.
 
-It never touches `data/`, the notebooks, or the tables in the `public` schema. Cleaned tables go to
-`staging/` (files) and to a new `v2` schema in the database.
+It writes only `staging/` (files) and a schema called `vibrancy` in the database, and never touches any other table
+in that database.
 
 ## Two steps
 
 1. **Download.** `python download_data.py` saves every source under `raw/` and records it in `raw/manifest.json`
    (URL, date, size and SHA-256 of each file). Its docstring says how to run it, and which links to change for a newer
-   release. It also downloads the three City of Sydney datasets (trees, stairs, mobility parking).
+   release. It also downloads four City of Sydney datasets: trees, stairs and mobility parking, which the ETL reads, and
+   the walking count sites, which it does not (they are kept for checking the index against measured pedestrian counts).
 2. **Clean, check, load.** `python -m etl run` (below) reads only the files in `raw/`. For each source it checks the
    file against its checksum in the manifest, unzips it if it is a zip, parses it, runs the checks, writes `staging/`
-   and loads schema `v2`. It uses no network. A source that isn't in the manifest yet is reported as `NOT RUN` with
+   and loads schema `vibrancy`. It uses no network. A source that isn't in the manifest yet is reported as `NOT RUN` with
    the command that downloads it, and the others carry on.
 
 ## Quick start
@@ -24,7 +25,7 @@ cp .env.example .env          # first time only; skip if you already have one
 # put your private DB_PASSWORD in .env (a TfNSW key is optional, see below)
 docker compose build etl      # first time, and whenever requirements.lock changes
 docker compose run --rm --no-deps --user "$(id -u):$(id -g)" --entrypoint python etl download_data.py   # step 1
-docker compose run --rm etl   # step 2: clean, check, and load into schema v2
+docker compose run --rm etl   # step 2: clean, check, and load into schema vibrancy
 ```
 
 The other commands:
@@ -54,11 +55,11 @@ Username:          postgres (or the DB_USER value in .env)
 Password:          the DB_PASSWORD value in .env
 ```
 
-After the ETL finishes, its tables appear under **Databases > postgres > Schemas > v2** in pgAdmin. Changing
+After the ETL finishes, its tables appear under **Databases > postgres > Schemas > vibrancy** in pgAdmin. Changing
 `DB_NAME` changes the database name shown in that path.
 
 Alternatively, to load into a separate PostgreSQL server that already runs on your computer, such as one your
-pgAdmin shows on port 5432 and the notebook's `Credentials.json` describes, use:
+pgAdmin shows on port 5432, describe it in a `Credentials.json` (copy `Credentials.example.json` and fill it in) and use:
 
 ```bash
 docker compose run --rm --no-deps etl run \
@@ -66,18 +67,16 @@ docker compose run --rm --no-deps etl run \
 ```
 
 `--credentials` takes the user, password and port from that file. `--db-host host.docker.internal` is needed
-because "localhost" inside Docker means the container itself. `--db-name postgres` is needed because
-`Credentials.json` names a database called `localhost`, which doesn't exist on that server (its only database is
-`postgres`). Either way the ETL only creates and replaces tables in a schema called `v2`; your `public` tables and
-any other schemas are left alone.
+because "localhost" inside Docker means the container itself. `--db-name` picks the database on that server
+(`postgres` on a new one). Either way the ETL only creates and replaces tables in a schema called `vibrancy`; every
+other schema is left alone.
 
 Run it in Docker: the pinned geospatial libraries aren't installed on a plain host Python. Without
 Docker, `python -m etl ...` works in an environment built from `requirements.lock`.
 
 ## From scratch, and starting over
 
-Everything from a clean project folder to the loaded database. You need Docker Desktop running and this branch
-checked out (`git switch v2-etl`).
+Everything from a clean project folder to the loaded database. You need Docker Desktop running.
 
 ```bash
 # 1. First time only: your private settings. Put a DB_PASSWORD in .env; a TFNSW_API_KEY is optional (see below).
@@ -92,7 +91,7 @@ docker compose run --rm --no-deps --user "$(id -u):$(id -g)" --entrypoint python
 # 4. Unzip, clean, check, and load everything into the Docker database (port 5433).
 docker compose run --rm etl
 
-# 4b. Or load into the PostgreSQL that pgAdmin shows on port 5432 (schema v2 only; your public tables are untouched).
+# 4b. Or load into the PostgreSQL that pgAdmin shows on port 5432 (schema vibrancy only; nothing else in that database is touched).
 docker compose run --rm --no-deps etl run --credentials Credentials.json --db-host host.docker.internal --db-name postgres
 ```
 
@@ -102,16 +101,16 @@ about 2.4 GB and reads it. ABS cuts big downloads off now and then; the download
 a few minutes to most of an hour. Step 4 can be repeated, for a second database for example, without downloading again.
 
 Where to look afterwards: `raw/` (the downloads and their unzipped folders, plus `raw/manifest.json`), `staging/`
-(the cleaned files and `data_quality_report.csv`, which is where the results of the checks are), and schema `v2` in the database.
+(the cleaned files and `data_quality_report.csv`, which is where the results of the checks are), and schema `vibrancy` in the database.
 
-**To wipe everything the ETL made and start again** (your `data/` folder, the notebooks and your `public` tables are never touched):
+**To wipe everything the ETL made and start again** (nothing else in the project or in the database is touched):
 
 ```bash
 rm -rf raw staging                                    # the downloads and the cleaned files
-docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "DROP SCHEMA IF EXISTS v2 CASCADE"'   # Docker database
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "DROP SCHEMA IF EXISTS vibrancy CASCADE"'   # Docker database
 ```
 
-For the pgAdmin database on 5432, run `DROP SCHEMA IF EXISTS v2 CASCADE;` in pgAdmin's Query Tool on the `postgres`
+For the pgAdmin database on 5432, run `DROP SCHEMA IF EXISTS vibrancy CASCADE;` in pgAdmin's Query Tool on the `postgres`
 database. If `rm` says permission denied (files written by Docker as root), run
 `docker run --rm -v "$PWD":/work -w /work data2001assignments-etl:latest rm -rf /work/raw /work/staging` instead.
 
@@ -137,12 +136,12 @@ docker compose run --rm --no-deps --user "$(id -u):$(id -g)" -e HOME=/tmp --entr
 `-c requirements.lock` makes pip use the same versions as the Docker image):
 
 ```bash
-conda create -n bustling -c conda-forge --override-channels python=3.11 -y
-conda activate bustling
+conda create -n vibrancy -c conda-forge --override-channels python=3.11 -y
+conda activate vibrancy
 pip install -r etl/requirements.txt -c requirements.lock
 ```
 
-Then open the notebook and choose the `bustling` environment as its kernel. To try it small first, download just those two
+Then open the notebook and choose the `vibrancy` environment as its kernel. To try it small first, download just those two
 sources (`python download_data.py abs_population hospitals`) and set `SOURCES = ["abs_population", "hospitals"]`.
 
 ## Transport for NSW (stops and traffic lights)
@@ -159,7 +158,7 @@ written to the manifest. **Don't put it in `.env.example`**: that file is tracke
 
 ## What it produces
 
-| Table (schema v2) | Source | Publisher | Notes |
+| Table (schema vibrancy) | Source | Publisher | Notes |
 |---|---|---|---|
 | `sa2_boundaries` | ASGS Edition 3 SA2 (2021) | ABS | Greater Sydney only (373 SA2s) |
 | `businesses` | Counts of Australian Businesses, data cube 9 | ABS | NSW, industries A to S; industry X (unknown) dropped |
@@ -172,13 +171,18 @@ written to the manifest. **Don't put it in `.env.example`**: that file is tracke
 | `hospitals` | NSW Features of Interest, Health Facilities | NSW Spatial Services | Includes private hospitals and a few ACT ones |
 | `public_amenities`, `crossings` | OpenStreetMap, Geofabrik NSW extract | OpenStreetMap contributors (ODbL) | Mapped points only; `crossings.is_zebra` covers the old and new zebra tagging (see Limitations) |
 | `mesh_blocks` | Census 2021 mesh block counts, plus the ABS allocation file | ABS | Greater Sydney only (60,881 blocks): dwellings and persons, with each block's SA1 and SA2 |
-| `roads` | OpenStreetMap, the same Geofabrik extract | OpenStreetMap contributors (ODbL) | The walkable road network, for AUO-style walkability (about 150,000 lines) |
+| `roads` | OpenStreetMap, the same Geofabrik extract | OpenStreetMap contributors (ODbL) | The walkable road network, from which street intersections are found (about 150,000 lines) |
 | `daily_living_shops` | OpenStreetMap, the same extract | OpenStreetMap contributors (ODbL) | Supermarkets and convenience stores (including newsagents and petrol stations), as AUO defines them; shops mapped as buildings are included at their centre |
 | `cos_trees`, `cos_stairs`, `cos_mobility_parking` | City of Sydney open data (ArcGIS layers) | City of Sydney (CC BY 4.0) | Inner city only (about 5 x 8 km), so they are extras, not Greater Sydney layers. The publisher's columns are kept, lower-cased (49,640 trees, 523 stairs and 365 mobility parking spaces in Sep 2026) |
 
+The City of Sydney walking count sites (`cos_walking_counts`) are downloaded but have no table: 120 survey sites in
+16 inner-city SA2s, with the daily average pedestrian count for each March and October survey from October 2013 to
+March 2026. They are kept to check the index against measured counts. The publisher's "Automatic hourly pedestrian
+count" was not used, because it has only four counters, all in the CBD, and stops in July 2025.
+
 Key columns keep the publishers' names (`SA2_CODE21`, `USE_ID`, and so on); new tables use lower-case `snake_case`
 columns.
-`v2.etl_manifest` lists, for every source, the release, URL, retrieval time and licence, and each
+`vibrancy.etl_manifest` lists, for every source, the release, URL, retrieval time and licence, and each
 table carries a `COMMENT` with the same.
 
 ## Where the files are kept
@@ -220,7 +224,7 @@ Here pandera 0.32.1 is pinned to the same version that project uses.
 Where the records go:
 
 - `staging/data_quality_report.csv`: this run's records.
-- `v2.data_quality_results`: a running log, one set of rows appended per run (with `run_at`).
+- `vibrancy.data_quality_results`: a running log, one set of rows appended per run (with `run_at`).
 
 Two more guards sit in the parsers. The business parser reads its count columns by position, so it first
 checks the turnover band headings and refuses a layout that changed (the June 2021 cube used different

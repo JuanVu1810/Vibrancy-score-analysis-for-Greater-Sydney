@@ -1,0 +1,20 @@
+# The methodology book. The build steps are in the project README ("Build the methodology book").
+version: 1
+project:
+  title: Vibrancy index for Greater Sydney
+  subtitle: Methodology
+  description: How the vibrancy index for the 373 Greater Sydney SA2s is built, checked and tested.
+  toc:
+    - file: index.md
+    - title: Method
+      children:
+        - file: framework.md
+        - file: pillars.md
+        - file: indicators.md
+        - file: spatial-rules.md
+        - file: score.md
+        - file: checks.md
+    - file: data-and-pipeline.md
+    - file: references.md
+site:
+  template: book-theme
