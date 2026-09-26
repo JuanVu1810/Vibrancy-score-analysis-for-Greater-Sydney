@@ -1,4 +1,4 @@
-"""Load the cleaned tables into PostGIS, in a schema of their own (v2), so the v1 tables stay untouched."""
+"""Load the cleaned tables into PostGIS, in a schema of their own (v2), so any other tables in the database stay untouched."""
 from __future__ import annotations
 
 import json

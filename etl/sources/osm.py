@@ -1,10 +1,8 @@
 """OpenStreetMap: public toilets, drinking water and pedestrian crossings from one Geofabrik snapshot.
 
-v1 used Overpass turbo exports taken on different days. One dated extract of the whole state is
-reproducible (the manifest records its checksum) and feeds four tables: public toilets and drinking water
-and crossings (mapped points only, like v1), and, for an AUO-style walkability measure, the walkable road network
-and the shops of the daily living index. OSM data is (c) OpenStreetMap
-contributors, ODbL.
+One dated extract of the whole state is reproducible (the manifest records its checksum) and feeds four tables:
+public toilets and drinking water, pedestrian crossings (mapped points only), and, for an AUO-style walkability measure,
+the walkable road network and the shops of the daily living index. OSM data is (c) OpenStreetMap contributors, ODbL.
 
 Roads follow the Australian Urban Observatory's "walkable road network that excluded highways and
 freeways": residential, unclassified, living streets, tertiary, secondary, primary, trunk and pedestrian
@@ -15,28 +13,26 @@ Shops follow the AUO daily living index (Higgs et al. 2019): a supermarket is sh
 convenience or grocery shop named after Aldi, Coles, Foodworks, IGA or Woolworths; a convenience store is
 shop=convenience, a newsagent or a petrol station. Shops mapped as buildings count too, at their centre.
 
-Zebra crossings: v1 counted nodes tagged crossing=zebra (1,825 in May 2024). Mappers have since moved
-to crossing=uncontrolled (or marked) plus crossing:markings=zebra, so only about 700 nodes still use the
-old tag while about 8,000 carry the new one. `is_zebra` covers both, so expect a much higher count than v1.
+Zebra crossings: mappers have moved from crossing=zebra to crossing=uncontrolled (or marked) plus
+crossing:markings=zebra, so about 700 nodes still use the old tag while about 8,000 carry the new one.
+`is_zebra` covers both.
 """
 from __future__ import annotations
 
 import re
-from email.utils import parsedate_to_datetime
 
 import geopandas as gpd
 import pandas as pd
 
 from ..core import NSW_BBOX, SYDNEY_BBOX, Snapshot, Source, error, inside, warn
 
-GEOFABRIK = "https://download.geofabrik.de/australia-oceania/australia/new-south-wales-latest.osm.pbf"
 AMENITIES = ("toilets", "drinking_water")
 # The OSM driver puts 'highway' in a column and everything else in an hstore-style 'other_tags' string.
 WHERE = ("highway = 'crossing' OR other_tags LIKE '%\"amenity\"=>\"toilets\"%' "
          "OR other_tags LIKE '%\"amenity\"=>\"drinking_water\"%'")
 _HSTORE = re.compile(r'"((?:[^"\\]|\\.)*)"=>"((?:[^"\\]|\\.)*)"')
 
-V1_AMENITIES, V1_CROSSINGS = 6595, 1825  # the v1 Overpass exports (May 2024), for a sanity comparison
+TYPICAL_AMENITIES, TYPICAL_ZEBRA = 6595, 1825  # counts from an earlier extract (May 2024), a sanity check on the size
 
 ROAD_TYPES = ("residential", "living_street", "unclassified", "tertiary", "tertiary_link", "secondary",
               "secondary_link", "primary", "primary_link", "trunk", "trunk_link", "pedestrian")
@@ -108,13 +104,6 @@ def _shops(path):
     return pd.concat(parts, ignore_index=True)
 
 
-def fetch(ctx) -> Snapshot:
-    rec = ctx.download("osm_nsw", "main", GEOFABRIK, filename="new-south-wales-latest.osm.pbf")
-    when = rec.get("last_modified")
-    release = f"Geofabrik extract of {parsedate_to_datetime(when).date()}" if when else "Geofabrik extract"
-    return Snapshot("osm_nsw", release, GEOFABRIK, {"main": rec})
-
-
 def parse(snap: Snapshot) -> dict:
     import pyogrio  # imported here so listing and checking sources doesn't need the OSM reader
 
@@ -158,12 +147,12 @@ def check(out: dict, ctx) -> list:
     for kind in AMENITIES:
         if not (am["amenity"] == kind).any():
             issues.append(error(f"no '{kind}' points found"))
-    if len(am) and not (V1_AMENITIES / 2 <= len(am) <= V1_AMENITIES * 2):
-        issues.append(warn(f"{len(am):,} amenities, against {V1_AMENITIES:,} in v1 (Overpass, May 2024)"))
+    if len(am) and not (TYPICAL_AMENITIES / 2 <= len(am) <= TYPICAL_AMENITIES * 2):
+        issues.append(warn(f"{len(am):,} amenities, against about {TYPICAL_AMENITIES:,} in an earlier extract (May 2024)"))
     if not len(cr):
         issues.append(error("no crossings found"))
-    elif int(cr["is_zebra"].sum()) < V1_CROSSINGS / 2:  # more than v1 is expected, see the module notes
-        issues.append(warn(f"only {int(cr['is_zebra'].sum()):,} zebra crossings, against {V1_CROSSINGS:,} in v1"))
+    elif int(cr["is_zebra"].sum()) < TYPICAL_ZEBRA / 2:  # more than before is expected, see the module notes
+        issues.append(warn(f"only {int(cr['is_zebra'].sum()):,} zebra crossings, against about {TYPICAL_ZEBRA:,} in an earlier extract"))
     for name, gdf in (("amenities", am), ("crossings", cr), ("roads", out["roads"]),
                       ("shops", out["daily_living_shops"])):
         if not inside(gdf.total_bounds, NSW_BBOX):
@@ -180,5 +169,5 @@ def check(out: dict, ctx) -> list:
 
 SOURCES = [
     Source("osm_nsw", "OpenStreetMap, New South Wales (Geofabrik extract)", "ODbL 1.0 (share-alike)",
-           "(c) OpenStreetMap contributors", ("public_amenities", "crossings", "roads", "daily_living_shops"), fetch, parse, check),
+           "(c) OpenStreetMap contributors", ("public_amenities", "crossings", "roads", "daily_living_shops"), parse, check),
 ]

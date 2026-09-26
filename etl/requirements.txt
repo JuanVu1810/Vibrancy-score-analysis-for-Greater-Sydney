@@ -1,0 +1,22 @@
+# What the ETL needs to run directly, without Docker. Install it with the project's pins, so the versions match
+# the Docker image exactly but the notebook-only libraries (Jupyter, plotly, folium ...) are left out:
+#
+#   conda create -n bustling -c conda-forge --override-channels python=3.11 -y
+#   conda activate bustling
+#   pip install -r etl/requirements.txt -c requirements.lock
+#
+pandas
+numpy
+geopandas
+shapely
+pyogrio
+pyproj
+SQLAlchemy
+GeoAlchemy2
+psycopg2-binary
+requests
+openpyxl
+pandera
+pytest
+ipykernel          # so the notebook (etl_walkthrough.ipynb) can use this environment as a kernel
+matplotlib         # the map in the notebook

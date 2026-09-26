@@ -3,9 +3,12 @@ import pandas as pd
 import pytest
 from openpyxl import Workbook
 
+import geopandas as gpd
+from shapely.geometry import Point
+
 from etl.core import EtlError
 from etl.sources import abs as abs_sources
-from etl.sources import osm
+from etl.sources import cityofsydney, osm
 
 
 # --- OpenStreetMap: shops and roads --------------------------------------------------------------
@@ -81,3 +84,23 @@ def test_a_sheet_without_the_expected_heading_is_refused():
     ws.append(["some", "other", "sheet"])
     with pytest.raises(EtlError, match="MB_CODE_2021"):
         abs_sources.parse_mesh_counts_ws(ws)
+
+
+# --- City of Sydney extras -----------------------------------------------------------------------
+def test_city_of_sydney_columns_are_lower_cased_and_the_geometry_is_geom(tmp_path):
+    from etl.core import Snapshot
+    path = tmp_path / "stairs.geojson"
+    gpd.GeoDataFrame({"OBJECTID": [1, 2], "No_Steps": [5, 9]}, geometry=[Point(151.2, -33.87), Point(151.21, -33.88)],
+                     crs=4326).to_file(path, driver="GeoJSON")
+    # Snapshot.path() is ROOT / path, and an absolute path replaces ROOT
+    snap = Snapshot("cos_stairs", "x", "http://example.com", {"main": {"path": str(path)}}, retrieved_at="2026-09-25T00:00:00Z")
+    out = cityofsydney.parse(snap)
+    assert list(out) == ["cos_stairs"]
+    assert list(out["cos_stairs"].columns) == ["objectid", "no_steps", "geom"]
+    assert out["cos_stairs"].geometry.name == "geom"
+
+
+def test_city_of_sydney_layers_with_too_few_rows_fail_the_check():
+    gdf = gpd.GeoDataFrame({"objectid": [1, 2]}, geometry=[Point(151.2, -33.87), Point(151.21, -33.88)], crs=4326)
+    issues = cityofsydney.check({"cos_stairs": gdf.rename_geometry("geom")}, None)
+    assert any(level == "error" and "only 2 rows" in message for level, message in issues)

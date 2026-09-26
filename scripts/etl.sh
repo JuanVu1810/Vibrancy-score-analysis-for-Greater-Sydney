@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the ETL:  bash scripts/etl.sh run|verify|list [options]
+# Run the ETL:  bash scripts/etl.sh run|list [options]
 # See etl/README.md. In Docker use:  docker compose run --rm etl run
 set -euo pipefail
 cd "$(dirname "$0")/.."

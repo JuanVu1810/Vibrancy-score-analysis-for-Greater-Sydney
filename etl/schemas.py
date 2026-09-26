@@ -154,6 +154,9 @@ def build_schemas() -> dict:
             **text(["crossing", "crossing_ref", "crossing_markings"], nullable=True),
             "is_zebra": pa.Column(bool, nullable=False),
             "geom": points(NSW_BBOX)}, geo=True),
+        # City of Sydney layers keep the publisher's columns, so only the key and the location are required
+        **{name: table({**ints(["objectid"], nullable=False, unique=True), "geom": points(NSW_BBOX)},
+                       geo=True, strict=False) for name in ("cos_trees", "cos_stairs", "cos_mobility_parking")},
     }
 
 
