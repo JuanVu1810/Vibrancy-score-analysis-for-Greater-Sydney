@@ -1,0 +1,3312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Greater Sydney vibrancy index</title>
+<meta name="description" content="An interactive vibrancy index for Greater Sydney.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin=""><style>
+/* Theme tokens */
+:root{
+    --plane:#f9f9f7;
+    --surface:#fcfcfb;
+    {{COLOR_VARIABLES_LIGHT}}
+    --ink2:#52514e;
+    --grid:#e1e0d9;
+    --axis:#c3c2b7;
+    --border:rgba(11,11,11,.1);
+    --map-fade:#c9cbc6;
+    --map-border:#70726d;
+    --link:var(--ink);
+    --chart-secondary:var(--muted)
+} :root[data-theme=dark]{
+    --plane:#0d0d0d;
+    --surface:#1a1a19;
+    {{COLOR_VARIABLES_DARK}}
+    --ink2:#d1d0ca;
+    --grid:#343431;
+    --axis:#575752;
+    --border:rgba(255,255,255,.14);
+    --map-fade:#464844;
+    --map-border:#b6b7b0;
+    --link:var(--ink);
+    --chart-secondary:var(--muted)
+}*{
+    box-sizing:border-box
+}html,body{
+    overflow-x:hidden
+}body{
+    margin:0;
+    ;
+    background:var(--plane);
+    color:var(--ink);
+    font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif
+}.wrap{
+    max-width:1120px;
+    margin:auto;
+    padding:0 16px 44px
+}:focus-visible{
+    outline:2px solid var(--link);
+    outline-offset:2px
+}.hero{
+    padding:36px 0 20px
+}.hero-top{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:center
+}.kicker{
+    margin:0 0 8px;
+    color:var(--ink2);
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase
+}h1{
+    margin:0 0 12px;
+    max-width:22em;
+    font-size:clamp(28px,4.6vw,46px);
+    line-height:1.12
+}h2{
+    margin:0 0 6px;
+    font-size:clamp(20px,2.6vw,26px);
+    line-height:1.25
+}h3{
+    margin:0 0 5px;
+    font-size:18px
+}.dek,.sub,.note{
+    color:var(--ink2);
+    max-width:52em
+}.dek{
+    margin:0 0 22px;
+    font-size:clamp(16px,1.9vw,19px)
+}.sub{
+    margin:0 0 10px
+}.how,.source{
+    color:var(--ink2);
+    font-size:13px;
+    margin:8px 0
+}.source{
+    color:var(--muted);
+    font-size:12.5px
+}.kpis{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px
+}.kpi,.card,details.table{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px
+}.kpi{
+    padding:14px 16px
+}.kpi span{
+    font-size:13px;
+    color:var(--ink2)
+}.kpi strong{
+    display:block;
+    font-size:28px;
+    line-height:1.12;
+    margin:3px 0
+}.card{
+    padding:22px;
+    margin-top:16px
+}.controls,.map-tools,.chips,.legend{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px
+}.map-tools{
+    justify-content:space-between;
+    margin:12px 0
+}.chips{
+    gap:7px
+}.chip,.button{
+    font:inherit;
+    font-size:14px;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid var(--axis);
+    background:transparent;
+    color:var(--ink);
+    cursor:pointer
+}.chip[aria-pressed=true]{
+    background:var(--ink);
+    color:var(--surface);
+    border-color:var(--ink)
+}.legend{
+    font-size:13px;
+    color:var(--ink2);
+    margin:8px 0
+}.legend-item{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:inherit;
+    font:inherit
+}.legend-choice{
+    padding:2px 4px;
+    border:0;
+    border-radius:4px;
+    background:transparent;
+    cursor:pointer
+}.legend-choice.dimmed{
+    opacity:.38
+}.swatch{
+    width:13px;
+    height:13px;
+    border-radius:3px;
+    display:inline-block
+}.swatch.hollow{
+    background:transparent!important;
+    border:1px solid var(--muted)
+}#map-wrap{
+    position:relative
+}#map{
+    height:660px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+    background:var(--plane)
+}.leaflet-container{
+    background:var(--plane);
+    font:inherit
+}.leaflet-control-attribution{
+    background:var(--surface)!important;
+    color:var(--ink2)!important
+}.chosen-halo{
+    filter:drop-shadow(0 0 2px rgba(0,0,0,.8)) drop-shadow(0 0 2px rgba(0,0,0,.8))
+}.map-label{
+    color:var(--ink);
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+    text-shadow:0 0 3px var(--surface),0 0 3px var(--surface);
+    pointer-events:none
+}.profile{
+    position:absolute;
+    right:12px;
+    top:12px;
+    z-index:800;
+    width:min(350px,calc(100% - 24px));
+    max-height:calc(100% - 24px);
+    overflow:auto;
+    padding:15px;
+    background:var(--surface);
+    border:1px solid var(--axis);
+    border-radius:10px;
+    box-shadow:0 4px 16px rgba(0,0,0,.2)
+}.profile[hidden]{
+    display:none
+}.close{
+    float:right;
+    border:0;
+    background:none;
+    color:var(--ink);
+    font-size:22px;
+    cursor:pointer
+}.type-chip{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:999px;
+    color:#fff;
+    font-size:12px
+}.axis-labels{
+    display:grid;
+    grid-template-columns:1fr 2fr 1fr;
+    font-size:10px;
+    color:var(--ink2);
+    margin:8px 44px 2px 72px
+}.axis-labels span:nth-child(2){
+    text-align:center
+}.axis-labels span:last-child{
+    text-align:right
+}.pillar{
+    display:grid;
+    grid-template-columns:65px 1fr 76px;
+    gap:7px;
+    align-items:center;
+    font-size:12px;
+    margin:5px 0
+}.pillar b{
+    display:block;
+    min-width:0;
+    white-space:nowrap
+}.pillar b small{
+    display:block;
+    color:var(--ink2);
+    font-size:10px;
+    font-weight:400;
+    line-height:1.1
+}.pillar.intensity > span,.pillar.intensity > b,.pillar-text.intensity-text{
+    color:var(--intensity-text)
+}.pillar.diversity > span,.pillar.diversity > b,.pillar-text.diversity-text{
+    color:var(--diversity-text)
+}.pillar.design > span,.pillar.design > b,.pillar-text.design-text{
+    color:var(--design-text)
+}.pillar.intensity .bar i{
+    background:var(--intensity-bar)
+}.pillar.diversity .bar i{
+    background:var(--diversity-bar)
+}.pillar.design .bar i{
+    background:var(--design-bar)
+}.drawer label.intensity{
+    color:var(--intensity-text)
+}.drawer label.diversity{
+    color:var(--diversity-text)
+}.drawer label.design{
+    color:var(--design-text)
+}.drawer label.intensity input{
+    accent-color:var(--intensity-bar)
+}.drawer label.diversity input{
+    accent-color:var(--diversity-bar)
+}.drawer label.design input{
+    accent-color:var(--design-bar)
+}.layer-dot{
+    display:inline-block;
+    width:9px;
+    height:9px;
+    margin-right:5px;
+    border-radius:50%;
+    vertical-align:1px
+}.pillar-button.intensity .layer-dot{
+    background:var(--intensity-bar)
+}.pillar-button.diversity .layer-dot{
+    background:var(--diversity-bar)
+}.pillar-button.design .layer-dot{
+    background:var(--design-bar)
+}.quintile-focus-button.quintile-4 .layer-dot{
+    background:var(--c4)
+}.quintile-focus-button.quintile-3 .layer-dot{
+    background:var(--c3)
+}.quintile-focus-button.quintile-2 .layer-dot{
+    background:var(--c2)
+}.quintile-focus-button.quintile-1 .layer-dot{
+    background:var(--c1)
+}.quintile-focus-button.quintile-0 .layer-dot{
+    background:var(--c0)
+}.jump-layer.intensity{
+    color:var(--intensity-text)
+}.jump-layer.diversity{
+    color:var(--diversity-text)
+}.jump-layer.design{
+    color:var(--design-text)
+}.chart text.axis-title{
+    fill:var(--ink)
+}.chart text.axis-title.intensity-title,.chart text.axis-title .intensity-title{
+    fill:var(--intensity-text)
+}.chart text.axis-title.diversity-title,.chart text.axis-title .diversity-title{
+    fill:var(--diversity-text)
+}.chart text.axis-title.design-title,.chart text.axis-title .design-title{
+    fill:var(--design-text)
+}.type-dense-diverse .type-chip,.type-dense-diverse .type-swatch{
+    background:var(--place-dense-diverse)
+}.type-less-dense-diverse .type-chip,.type-less-dense-diverse .type-swatch{
+    background:var(--place-less-dense-diverse)
+}.type-dense-less-diverse .type-chip,.type-dense-less-diverse .type-swatch{
+    background:var(--place-dense-less-diverse)
+}.type-less-dense-less-diverse .type-chip,.type-less-dense-less-diverse .type-swatch{
+    background:var(--place-less-dense-less-diverse)
+}.type-dense-diverse .type-chip,.type-less-dense-diverse .type-chip{
+    color:var(--surface)
+}.type-dense-less-diverse .type-chip,.type-less-dense-less-diverse .type-chip{
+    color:var(--ink)
+}:root[data-theme=dark] .type-dense-less-diverse .type-chip{
+    color:var(--surface)
+}.chart text.place-dense-diverse-text{
+    fill:var(--place-dense-diverse-text)
+}.chart text.place-less-dense-diverse-text{
+    fill:var(--place-less-dense-diverse-text)
+}.chart text.place-dense-less-diverse-text{
+    fill:var(--place-dense-less-diverse-text)
+}.chart text.place-less-dense-less-diverse-text{
+    fill:var(--place-less-dense-less-diverse-text)
+}
+.bar{
+    height:11px;
+    background:var(--grid);
+    border-radius:8px;
+    position:relative
+}.bar:after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:1px;
+    bottom:1px;
+    width:1px;
+    background:var(--muted)
+}.bar i{
+    position:absolute;
+    left:calc(50% + var(--offset));
+    top:1px;
+    bottom:1px;
+    width:6px;
+    border-radius:4px;
+    background:var(--ink);
+    transform:translateX(-50%)
+}.facts{
+    padding:0;
+    margin:10px 0;
+    list-style:none;
+    font-size:12px;
+    display:grid;
+    gap:4px
+}.facts span{
+    display:block;
+    color:var(--ink2)
+}.two{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px
+}.four{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px
+}.place-card{
+    border:1px solid var(--border);
+    padding:13px;
+    border-radius:10px
+}.rank{
+    font-size:13px;
+    color:var(--ink2)
+}.type-wrap{
+    max-width:100%;
+    overflow-x:auto
+}.type-table{
+    width:100%;
+    table-layout:fixed;
+    border-collapse:collapse;
+    font-size:14px
+}.type-table td{
+    overflow-wrap:anywhere
+}.type-table th:last-child,.type-table td:last-child{
+    white-space:normal
+}.type-table td,.type-table th{
+    padding:7px;
+    border-bottom:1px solid var(--grid);
+    text-align:left
+}.type-row{
+    cursor:pointer
+}.type-row[aria-pressed=true]{
+    background:color-mix(in srgb,var(--link) 10%,transparent)
+}.type-name{
+    display:flex;
+    gap:6px;
+    align-items:center
+}.type-swatch{
+    width:13px;
+    height:13px;
+    border-radius:3px;
+    display:inline-block
+}.focus-state{
+    margin:4px 0 10px;
+    color:var(--ink2);
+    font-size:13px
+}.chart{
+    width:100%;
+    min-height:250px;
+    position:relative
+}.chart svg{
+    width:100%;
+    height:auto;
+    display:block
+}.chart text{
+    font-family:inherit;
+    fill:var(--ink);
+    font-size:12px
+}.chart .tick{
+    fill:var(--ink2)
+}.chart .chart-title{
+    fill:var(--ink);
+    font-weight:600
+}.chart .halo{
+    stroke:var(--surface);
+    stroke-width:3px;
+    stroke-linejoin:round;
+    paint-order:stroke
+}.chart .axis{
+    stroke:var(--axis);
+    stroke-width:1
+}.chart .ref{
+    stroke:var(--ink);
+    stroke-width:1
+}.chart .dot{
+    stroke:var(--surface);
+    stroke-width:1.2
+}.chart .mark{
+    cursor:pointer
+}.chart .label{
+    font-size:12px;
+    font-weight:650
+}.chart .tooltip{
+    position:absolute;
+    pointer-events:none;
+    display:none;
+    z-index:2;
+    max-width:230px;
+    background:var(--surface);
+    color:var(--ink);
+    border:1px solid var(--axis);
+    border-radius:6px;
+    padding:5px 8px;
+    font-size:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,.15)
+}.drawer{
+    margin:10px 0;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px
+}.drawer summary{
+    cursor:pointer;
+    font-weight:700
+}.drawer-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+    margin:10px 0
+}.drawer label{
+    font-size:13px
+}.drawer input[type=range]{
+    width:100%
+}.state{
+    font-size:14px;
+    font-weight:650
+}.moves{
+    font-size:12px;
+    margin:8px 0 0;
+    padding-left:20px
+}.link-button{
+    font:inherit;
+    padding:0;
+    border:0;
+    background:none;
+    color:var(--link);
+    text-decoration:underline;
+    text-align:left;
+    cursor:pointer
+}.moran-title{
+    margin:0 0 10px;
+    font-size:18px;
+    line-height:1.3
+}.found-title{
+    margin:0 0 10px;
+    font-size:18px;
+    line-height:1.3
+}.moran-body{
+    display:grid;
+    grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);
+    gap:18px;
+    align-items:start
+}.moran-text p{
+    margin:0 0 10px;
+    font-size:14px
+}.chart .quadrant{
+    stroke:var(--axis);
+    stroke-width:1;
+    stroke-dasharray:4 3
+}.chart .dot.pale{
+    stroke:var(--muted);
+    stroke-width:.8
+}.chart-card{
+    margin-top:14px;
+    padding:14px;
+    border:1px solid var(--border);
+    border-radius:10px
+}details.table{
+    max-width:100%;
+    overflow:hidden;
+    margin-top:16px;
+    padding:14px 18px
+}summary{
+    cursor:pointer;
+    font-weight:700
+}.tablebar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:10px 0
+}.tablewrap{
+    width:100%;
+    overflow:auto;
+    max-height:440px;
+    border:1px solid var(--border);
+    border-radius:8px
+}table{
+    border-collapse:collapse;
+    width:100%;
+    font-size:13px
+}th,td{
+    padding:7px 9px;
+    border-bottom:1px solid var(--grid);
+    text-align:left;
+    white-space:nowrap
+}th{
+    position:sticky;
+    top:0;
+    background:var(--surface);
+    z-index:1
+}#table-view th,#table-view td{
+    white-space:normal;
+    overflow-wrap:anywhere
+}.sort{
+    font:inherit;
+    color:var(--ink2);
+    background:none;
+    border:0;
+    padding:0;
+    cursor:pointer;
+    font-weight:700
+}.data-row{
+    cursor:pointer
+}.data-row:hover,.data-row.active{
+    background:color-mix(in srgb,var(--link) 12%,transparent)
+}footer{
+    font-size:12px;
+    color:var(--ink2);
+    margin-top:22px
+}a{
+    color:var(--link)
+}@media(max-width:900px){
+    .moran-body{
+        grid-template-columns:1fr
+    }.kpis{
+        grid-template-columns:repeat(2,minmax(0,1fr))
+    }.four{
+        grid-template-columns:repeat(2,minmax(0,1fr))
+    }
+}@media(max-width:620px){
+    .wrap{
+        padding:0 10px 32px
+    }.card{
+        padding:16px 14px
+    }.kpis,.two,.four,.drawer-grid{
+        grid-template-columns:1fr
+    }#map{
+        height:480px
+    }.profile{
+        position:static;
+        width:100%;
+        max-height:none;
+        margin-top:10px
+    }.hero-top{
+        align-items:flex-start
+    }.hero-top .kicker{
+        max-width:220px
+    }.map-tools{
+        align-items:flex-start
+    }.chart{
+        min-height:220px
+    }
+}
+</style></head>
+<body>
+<div class="wrap">
+<header class="hero">
+<div class="hero-top">
+<p class="kicker">Greater Sydney vibrancy index</p>
+<label class="theme">Theme <select id="theme">
+<option value="light">Light</option>
+<option value="dark">Dark</option>
+</select>
+</label>
+</div>
+<h1>{{TITLE}}</h1>
+<p class="dek">We scored {{SCORED_SA2S}} of {{TOTAL_SA2S}} SA2s. The score is standardised, so 100 is the Greater Sydney average and 10 points is one standard deviation. The top quintile takes up {{TOP_AREA}} of the land we scored, holds {{TOP_RESIDENTS}} of residents, and is concentrated around the inner city and major centres.</p>
+<div class="kpis">
+<div class="kpi">
+<span>Land and residents</span>
+<strong>{{TOP_AREA}} / {{TOP_RESIDENTS}}</strong>
+<span>top quintile of scored SA2s</span>
+</div>
+<div class="kpi">
+<span>Top-quintile access</span>
+<strong>{{EQUITY_HIGH}} vs {{EQUITY_LOW}}</strong>
+<span>higher- and lower-income areas</span>
+</div>
+<div class="kpi">
+<span>Top-25 stability</span>
+<strong>{{TOP_OVERLAP}} of 25</strong>
+<span>the same SA2s across variants</span>
+</div>
+<div class="kpi">
+<span>SA2s scored</span>
+<strong>{{SCORED_SA2S}} of {{TOTAL_SA2S}}</strong>
+<span>one area has no residents or businesses</span>
+</div>
+</div>
+</header>
+<main>
+<section class="card" id="where">
+<p class="kicker">Where is it most vibrant?</p>
+<h2>Vibrancy is highest in the inner city, and big centres like Parramatta and Liverpool stand out</h2>
+<p class="sub">The map groups scores into quintiles. Nearby SA2s often have similar scores (global Moran’s I {{GLOBAL_I}}, p = {{GLOBAL_P}}).</p>
+<p class="how">
+<strong>How to read it:</strong> Colours show quintiles of the ranking, and the legend gives each quintile's score range. {{SCORE_MIDDLE_SHARE}} of SA2s score between 90 and 110.</p>
+<div class="map-tools">
+<div class="chips" role="group" aria-label="Map layers">
+<button class="chip layer" data-layer="overall" aria-pressed="true">Overall score</button>
+<button class="chip layer pillar-button intensity" data-layer="intensity" aria-pressed="false"><i class="layer-dot"></i>Intensity</button>
+<button class="chip layer pillar-button diversity" data-layer="diversity" aria-pressed="false"><i class="layer-dot"></i>Diversity</button>
+<button class="chip layer pillar-button design" data-layer="design" aria-pressed="false"><i class="layer-dot"></i>Design</button>
+<button class="chip layer" data-layer="place_types" aria-pressed="false">Place types</button>
+<button class="chip layer" data-layer="hotspots" aria-pressed="false">Hot spots</button>
+</div>
+<div class="chips">
+<input id="map-search" list="sa2-names" placeholder="Find an SA2" aria-label="Find an SA2">
+<datalist id="sa2-names">
+</datalist>
+<button class="button" id="search-clear">Clear</button>
+<span id="search-message" class="source" aria-live="polite">
+</span>
+</div>
+</div>
+<div class="controls">
+<div class="chips">
+<button class="chip view" data-view="metro" aria-pressed="true">Greater Sydney</button>
+<button class="chip view" data-view="inner" aria-pressed="false">Inner city</button>
+<button class="chip view" data-view="parramatta" aria-pressed="false">Parramatta</button>
+<button class="chip view" data-view="liverpool" aria-pressed="false">Liverpool</button>
+</div>
+</div>
+<p id="state-line" class="state">Showing: baseline</p>
+<div id="legend" class="legend" aria-label="Map key">
+</div>
+<p id="focus-line" class="focus-state" aria-live="polite" hidden>
+</p>
+<div id="map-wrap">
+<div id="map" role="region" aria-label="Interactive map of vibrancy">
+</div>
+<aside id="profile" class="profile" hidden aria-live="polite">
+</aside>
+</div>
+<p class="note">{{MAP_CAPTION}}</p>
+<p class="source">Data: ABS SA2 boundaries (2021) and the fourteen indicators behind this score, from ABS, Transport for NSW, NSW Education, AEC, NSW Spatial Services, City of Sydney and OpenStreetMap (full list in Methods). Covers every map layer: Overall score, the three pillars, Place types and Hot spots.</p>
+<details class="drawer" id="what-if">
+<summary>What if the pillars counted differently?</summary>
+<p class="source">Weights affect Overall score only. Pillar layers, place types and hot spots remain based on the baseline.</p>
+<div class="drawer-grid">
+<label class="intensity" data-pillar="intensity">Intensity <b id="intensity-pct">33%</b>
+<input id="weight-intensity" type="range" min="0" max="100" step="5" value="50">
+</label>
+<label class="diversity" data-pillar="diversity">Diversity <b id="diversity-pct">33%</b>
+<input id="weight-diversity" type="range" min="0" max="100" step="5" value="50">
+</label>
+<label class="design" data-pillar="design">Design <b id="design-pct">33%</b>
+<input id="weight-design" type="range" min="0" max="100" step="5" value="50">
+</label>
+</div>
+<div class="chips">
+<button class="chip preset" data-weights="100,0,0">Intensity only</button>
+<button class="chip preset" data-weights="50,0,50">Drop Diversity</button>
+<button class="chip preset" data-weights="50,100,50">Diversity counts double</button>
+<button class="chip" id="baseline">Back to baseline</button>
+</div>
+<p id="weight-summary" class="source">
+</p>
+<ol id="rank-moves" class="moves">
+</ol>
+<label class="source">Sensitivity check <select id="variant-picker">
+</select>
+</label>
+<p id="variant-summary" class="source">
+</p>
+</details>
+<div class="chart-card">
+<p class="kicker">Distance from the centre</p>
+<h3 class="found-title">{{DISTANCE_TITLE}}</h3>
+<div class="chips quintile-focus" role="group" aria-label="Focus a quintile on this chart">
+<button class="chip quintile-focus-button quintile-4" data-chart="distance-chart" data-quintile="4" aria-pressed="false"><i class="layer-dot"></i>Top quintile</button>
+<button class="chip quintile-focus-button quintile-3" data-chart="distance-chart" data-quintile="3" aria-pressed="false"><i class="layer-dot"></i>Second quintile</button>
+<button class="chip quintile-focus-button quintile-2" data-chart="distance-chart" data-quintile="2" aria-pressed="false"><i class="layer-dot"></i>Middle quintile</button>
+<button class="chip quintile-focus-button quintile-1" data-chart="distance-chart" data-quintile="1" aria-pressed="false"><i class="layer-dot"></i>Fourth quintile</button>
+<button class="chip quintile-focus-button quintile-0" data-chart="distance-chart" data-quintile="0" aria-pressed="false"><i class="layer-dot"></i>Bottom quintile</button>
+<button class="chip quintile-focus-clear" data-chart="distance-chart" aria-pressed="true">Show all</button>
+</div>
+<p id="distance-chart-focus-state" class="state">Showing: baseline</p>
+<div id="distance-chart" class="chart" aria-label="Vibrancy score by distance group">
+</div>
+<p id="distance-axis-note" class="note">
+</p>
+<p class="source">Data: this page's vibrancy score, plotted against distance from the Sydney GPO.</p>
+</div>
+<div class="chart-card">
+<p class="kicker">How unusual is a busy SA2?</p>
+<h3 class="found-title">{{HISTOGRAM_TITLE}}</h3>
+<div id="histogram-chart" class="chart" aria-label="Vibrancy score histogram">
+</div>
+<p class="source">Data: the distribution of this page's vibrancy score across all scored SA2s.</p>
+</div>
+<div class="chart-card moran-card">
+<p class="kicker">Do neighbouring SA2s score alike?</p>
+<h3 class="moran-title">{{MORAN_TITLE}}</h3>
+<div class="moran-body">
+<div>
+<div id="moran-chart" class="chart" aria-label="Each SA2's score against the average score of its neighbours">
+</div>
+<p id="moran-axis-note" class="note">
+</p>
+<p class="source">Data: this page's vibrancy score and each SA2's queen-contiguity neighbours.</p>
+</div>
+<div class="moran-text">{{MORAN_TEXT}}</div>
+</div>
+</div>
+</section>
+<section class="card" id="why">
+<p class="kicker">Which ingredients drive it?</p>
+<h2>Dense places usually have fine-grained streets too: Intensity and Design rise together, Diversity does not</h2>
+<p class="sub">The three pillars are shown on the same 100-centred score scale, but each has its own quintiles on the map.</p>
+<p class="how">
+<strong>How to read it:</strong> Use a button to show one pillar on the main map.</p>
+<div class="chips">
+<button class="chip jump-layer pillar-button intensity" data-layer="intensity"><i class="layer-dot"></i>Show Intensity on the map</button>
+<button class="chip jump-layer pillar-button diversity" data-layer="diversity"><i class="layer-dot"></i>Show Diversity on the map</button>
+<button class="chip jump-layer pillar-button design" data-layer="design"><i class="layer-dot"></i>Show Design on the map</button>
+</div>
+<div class="chart-card">
+<div class="chips quintile-focus" role="group" aria-label="Focus a quintile on this chart">
+<button class="chip quintile-focus-button quintile-4" data-chart="intensity-design-chart" data-quintile="4" aria-pressed="false"><i class="layer-dot"></i>Top quintile</button>
+<button class="chip quintile-focus-button quintile-3" data-chart="intensity-design-chart" data-quintile="3" aria-pressed="false"><i class="layer-dot"></i>Second quintile</button>
+<button class="chip quintile-focus-button quintile-2" data-chart="intensity-design-chart" data-quintile="2" aria-pressed="false"><i class="layer-dot"></i>Middle quintile</button>
+<button class="chip quintile-focus-button quintile-1" data-chart="intensity-design-chart" data-quintile="1" aria-pressed="false"><i class="layer-dot"></i>Fourth quintile</button>
+<button class="chip quintile-focus-button quintile-0" data-chart="intensity-design-chart" data-quintile="0" aria-pressed="false"><i class="layer-dot"></i>Bottom quintile</button>
+<button class="chip quintile-focus-clear" data-chart="intensity-design-chart" aria-pressed="true">Show all</button>
+</div>
+<p id="intensity-design-chart-focus-state" class="state">Showing: baseline</p>
+<div id="intensity-design-chart" class="chart" aria-label="Intensity and Design comparison">
+</div>
+<p id="intensity-design-chart-caption" class="note">
+</p>
+<p class="source">Data: this page's Intensity and Design pillar scores.</p>
+</div>
+<div class="chart-card">
+<div class="chips quintile-focus" role="group" aria-label="Focus a quintile on this chart">
+<button class="chip quintile-focus-button quintile-4" data-chart="density-diversity-chart" data-quintile="4" aria-pressed="false"><i class="layer-dot"></i>Top quintile</button>
+<button class="chip quintile-focus-button quintile-3" data-chart="density-diversity-chart" data-quintile="3" aria-pressed="false"><i class="layer-dot"></i>Second quintile</button>
+<button class="chip quintile-focus-button quintile-2" data-chart="density-diversity-chart" data-quintile="2" aria-pressed="false"><i class="layer-dot"></i>Middle quintile</button>
+<button class="chip quintile-focus-button quintile-1" data-chart="density-diversity-chart" data-quintile="1" aria-pressed="false"><i class="layer-dot"></i>Fourth quintile</button>
+<button class="chip quintile-focus-button quintile-0" data-chart="density-diversity-chart" data-quintile="0" aria-pressed="false"><i class="layer-dot"></i>Bottom quintile</button>
+<button class="chip quintile-focus-clear" data-chart="density-diversity-chart" aria-pressed="true">Show all</button>
+</div>
+<p id="density-diversity-chart-focus-state" class="state">Showing: baseline</p>
+<div id="density-diversity-chart" class="chart" aria-label="Density and Diversity comparison">
+</div>
+<p id="density-diversity-chart-caption" class="note">
+</p>
+<p id="density-diversity-axis-note" class="note">
+</p>
+<p class="source">Data: this page's Density (Intensity and Design combined) and Diversity pillar scores.</p>
+</div>
+</section>
+<section class="card" id="kinds">
+<p class="kicker">Are all vibrant places vibrant in the same way?</p>
+<h2>Dense places split in two: {{DENSE_DIVERSE_COUNT}} have a varied business mix and {{DENSE_LESS_COUNT}} do not</h2>
+<p class="sub">Density is the average of Intensity and Design. Diversity is considered separately.</p>
+<p class="how">
+<strong>How to read it:</strong> Select a row to keep that type in colour and fade the other three. Select it again to show all four.</p>
+<div class="type-wrap">
+<table class="type-table">
+<thead>
+<tr>
+<th>Type</th>
+<th>SA2s</th>
+<th>Residents</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>{{TYPE_ROWS}}</tbody>
+</table>
+</div>
+<p class="note">Four scored SA2s without a Diversity pillar count as less diverse.</p>
+<p class="source">Data: this page's Density and Diversity pillar scores and place-type rule.</p>
+</section>
+<section class="card">
+<p class="kicker">What does this look like on the ground?</p>
+<h2>Four places show what the score does and does not capture</h2>
+<p class="sub">Each bar uses a fixed axis from 70 to 130 around the Greater Sydney average of 100.</p>
+<p class="how">
+<strong>How to read it:</strong> Facts are raw densities and their percentiles among scored SA2s.</p>
+<div class="four">{{CARDS}}</div>
+<p class="note">The industrial example shows a limit: this screening score does not stand in for jobs.</p>
+<p class="source">Data: this page's pillar scores and raw indicator counts for each named SA2 (indicator sources in Methods).</p>
+</section>
+<section class="card">
+<p class="kicker">Who lives in the most vibrant places?</p>
+<h2>{{EQUITY_TITLE}}</h2>
+<p class="sub">Median income is an area average, not a household measure.</p>
+<p class="how">
+<strong>How to read it:</strong> Each pair compares top-quintile and bottom-quintile shares within one resident-weighted income group.</p>
+<p class="note" id="equity-key"><span style="color:var(--c4)">Dark</span>: top quintile of SA2s. <span style="color:var(--chart-secondary)">Grey</span>: bottom quintile of SA2s.</p>
+<div id="equity-chart" class="chart" aria-label="Equity shares by income group">
+</div>
+<p class="note">The difference describes areas, not individual households.</p>
+<p class="source">Data: ABS median employee income by SA2, and this page's vibrancy score.</p>
+</section>
+<section class="card" id="foot-traffic-check">
+<p class="kicker">Does it match what's actually busy?</p>
+<h2 id="foot-traffic-title">Measured walking counts align weakly with the score: Spearman {{WEEKDAY_CORRELATION}} on weekdays and {{WEEKEND_CORRELATION}} on weekends</h2>
+<p class="how">
+<strong>How to read it:</strong> The City of Sydney only counts pedestrians at 16 inner-city sites (ranked 1 to 29, all in the top quintile), so a quintile button below is only offered for the quintile that has data, and this check tests ordering among the busiest places only.</p>
+<div class="chart-card">
+<p class="kicker">Weekday walking counts</p>
+<h3 class="found-title">Busier weekdays track a higher score too (Spearman {{WEEKDAY_CORRELATION}})</h3>
+<div class="chips quintile-focus" role="group" aria-label="Focus a quintile on this chart">
+<button class="chip quintile-focus-button quintile-4" data-chart="weekday-chart" data-quintile="4" aria-pressed="false"><i class="layer-dot"></i>Top quintile</button>
+<button class="chip quintile-focus-clear" data-chart="weekday-chart" aria-pressed="true">Show all</button>
+</div>
+<p id="weekday-chart-focus-state" class="state">Showing: baseline</p>
+<div id="weekday-chart" class="chart" aria-label="Weekday walking counts and vibrancy score">
+</div>
+<p class="source">Data: City of Sydney weekday pedestrian counts (16 inner-city SA2s only) and this page's vibrancy score.</p>
+</div>
+<div class="chart-card">
+<p class="kicker">Weekend walking counts</p>
+<h3 class="found-title">Busier weekends track a higher score too (Spearman {{WEEKEND_CORRELATION}})</h3>
+<div class="chips quintile-focus" role="group" aria-label="Focus a quintile on this chart">
+<button class="chip quintile-focus-button quintile-4" data-chart="weekend-chart" data-quintile="4" aria-pressed="false"><i class="layer-dot"></i>Top quintile</button>
+<button class="chip quintile-focus-clear" data-chart="weekend-chart" aria-pressed="true">Show all</button>
+</div>
+<p id="weekend-chart-focus-state" class="state">Showing: baseline</p>
+<div id="weekend-chart" class="chart" aria-label="Weekend walking counts and vibrancy score">
+</div>
+<p class="source">Data: City of Sydney weekend pedestrian counts (16 inner-city SA2s only) and this page's vibrancy score.</p>
+</div>
+</section>
+<section class="card">
+<p class="kicker">How sure can we be?</p>
+<h2>The top group is stable, but individual ranks are not: the median SA2 moves {{MEDIAN_RANGE}} places</h2>
+<p class="sub">The top 25 retains {{TOP_OVERLAP}} of the same 25 SA2s across variants.</p>
+<p class="how">
+<strong>How to read it:</strong> Each bar shows the typical (median) movement for that quintile; the named SA2 is its most volatile member.</p>
+<div id="stability-chart" class="chart" data-band-order="Top quintile (75 SA2s)|Second quintile (74 SA2s)|Middle quintile (75 SA2s)|Fourth quintile (74 SA2s)|Bottom quintile (74 SA2s)" aria-label="Rank movement across sensitivity checks">
+</div>
+<p class="note">Ranks near the top and the bottom of the table hold still; ranks in the middle move the most.</p>
+<p class="source">Data: this page's vibrancy score recomputed under 22 method variants (see Methods).</p>
+<p class="note">Try changing the weights below the map and watch some of these ranks move.</p>
+<button id="try-what-if" class="button">Try it on the map</button>
+<h3>Limits</h3>
+<ul id="limits-list" class="limits">{{LIMITS}}</ul>
+</section>
+<section class="card">
+<p class="kicker">How was it made?</p>
+<h2>How the score is built</h2>
+<p class="sub">Fourteen indicators are transformed, standardised across scored SA2s, averaged into three equal-weight pillars, then ranked.</p>
+<p id="methods-detail">{{METHODS_DETAIL}}</p>
+<p class="how">
+<strong>How to read it:</strong> The score is standardised: 100 is the Greater Sydney average, and 10 points is one standard deviation.</p>
+<p class="source">Source dates: 2021 to 2026. Data credits: ABS, Transport for NSW, NSW Education, AEC, NSW Spatial Services, City of Sydney and OpenStreetMap. Contains OpenStreetMap data (c) OpenStreetMap contributors.</p>
+</section>
+<details class="table" id="table-view">
+<summary>Table view: {{SCORED_SA2S}} scored SA2s</summary>
+<div class="tablebar">
+<input id="filter" type="search" placeholder="Filter by SA2 name" aria-label="Filter table by SA2 name">
+<button class="button" id="download">Download CSV</button>
+<span id="table-count" class="source" aria-live="polite">
+</span>
+</div>
+<div class="tablewrap">
+<table>
+<thead>
+<tr>
+<th>
+<button class="sort" data-sort="score">Score</button>
+</th>
+<th>
+<button class="sort" data-sort="rank">Rank</button>
+</th>
+<th>
+<button class="sort" data-sort="name">SA2</button>
+</th>
+<th>
+<button class="sort" data-sort="place_type">Place type</button>
+</th>
+<th>
+<button class="sort" data-sort="hotspot">Hot spot</button>
+</th>
+<th>
+<button class="sort" data-sort="intensity">Intensity</button>
+</th>
+<th>
+<button class="sort" data-sort="diversity">Diversity</button>
+</th>
+<th>
+<button class="sort" data-sort="design">Design</button>
+</th>
+<th>
+<button class="sort" data-sort="residents">Residents</button>
+</th>
+<th>
+<button class="sort" data-sort="median_income">Median income</button>
+</th>
+</tr>
+</thead>
+<tbody id="rows">
+</tbody>
+</table>
+</div>
+</details>
+</main>
+<footer>
+<p>Vibrancy is a proxy for conditions that can support street activity. Use it to screen places, then follow up with local evidence.</p>
+<p>
+</p>
+</footer>
+</div><script id="story-data" type="application/json">{{DATA}}</script><script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script><script>
+
+
+const data = JSON.parse(document.querySelector('#story-data').textContent);
+const root = document.documentElement;
+const ramp = data.ramp;
+const pillarRamps = {intensity: [], diversity: [], design: []};
+const placeColours = {...data.place_colors};
+const hotspotColours = {};
+const scored = data.geo.features.filter(feature => feature.properties.scored);
+const byCode = new Map(data.geo.features.map(feature => [String(feature.properties.id), feature]));
+
+let currentLayer = 'overall';
+let selectedCode = null;
+let highlightCode = null;
+let focusedPlaceType = null;
+let focusedHotspot = null;
+let focusedQuintile = null;
+let sortColumn = 'score';
+let sortDirection = 'desc';
+let mode = 'baseline';
+let custom = null;
+let variant = 'Baseline';
+const pillarNames = ['intensity', 'diversity', 'design'];
+// Equal weights sit in the middle of the 0 to 100 sliders, so any one pillar can still be doubled.
+const equalSliderValues = [50, 50, 50];
+// The "Intensity only" sensitivity check is the one check whose ranking a weight setting can
+// reproduce exactly (weights 100/0/0), so its sliders sync to that setting as visual confirmation.
+const intensityOnlySliderValues = [100, 0, 0];
+// A card fact whose density is below these limits shows a whole-number total ("6 street intersections in total"),
+// because a small density such as 0.05 per km² is hard to picture. The place cards use the same limits.
+const smallResidentsPerHa = 1;
+const smallDensityPerKm2 = 1;
+// The four card facts: label, density key, the unit after a density (one, many), the key of the total,
+// the noun after a total (one, many), and the limit. A displayed 1 takes the singular; every other number the plural.
+const factDefinitions = [
+    {
+        label: 'Residents per hectare',
+        key: 'residents_per_ha',
+        units: ['resident per hectare', 'residents per hectare'],
+        totalKey: 'residents',
+        nouns: ['resident', 'residents'],
+        limit: smallResidentsPerHa,
+    },
+    {
+        label: 'Registered businesses per km²',
+        key: 'businesses_per_km2',
+        units: ['registered business per km²', 'registered businesses per km²'],
+        totalKey: 'businesses',
+        nouns: ['registered business', 'registered businesses'],
+        limit: smallDensityPerKm2,
+    },
+    {
+        label: 'Stops per km²',
+        key: 'stops_per_km2',
+        units: ['stop per km²', 'stops per km²'],
+        totalKey: 'stops',
+        nouns: ['stop', 'stops'],
+        limit: smallDensityPerKm2,
+    },
+    {
+        label: 'Street intersections per km²',
+        key: 'intersections_per_km2',
+        units: ['street intersection per km²', 'street intersections per km²'],
+        totalKey: 'intersections',
+        nouns: ['street intersection', 'street intersections'],
+        limit: smallDensityPerKm2,
+    },
+];
+
+// Return a numeric value or null for a missing value.
+function numberValue(value) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+    return Number(value);
+}
+
+// Format a whole number for a table or fact line.
+function formatWhole(value) {
+    const number = numberValue(value);
+    return number === null ? 'n/a' : Math.round(number).toLocaleString();
+}
+
+// Format a score without displaying a negative zero.
+function formatScore(value) {
+    const number = numberValue(value);
+    if (number === null) {
+        return 'n/a';
+    }
+    return (Math.abs(number) < 0.05 ? 0 : number).toFixed(1);
+}
+
+// Return a safe text form for an optional value.
+function textValue(value) {
+    return value === null || value === undefined ? 'n/a' : String(value);
+}
+
+// Create one SVG element with the supplied attributes.
+function svg(tag, attributes = {}) {
+    const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+    return element;
+}
+
+// Map a value from one numeric interval to another.
+function scale(value, lower, upper, start, end) {
+    return start + (value - lower) / (upper - lower) * (end - start);
+}
+
+// Return the zero-based fifth for a rank in a set of records.
+function rankClass(rank, total) {
+    return 4 - Math.floor((rank - 1) * 5 / total);
+}
+
+const layerColumn = {
+    overall: 'score',
+    intensity: 'intensity',
+    diversity: 'diversity',
+    design: 'design',
+};
+const classes = {};
+Object.keys(layerColumn).forEach(layerName => {
+    const column = layerColumn[layerName];
+    const ordered = scored
+        .filter(feature => feature.properties[column] !== null)
+        .sort((first, second) => second.properties[column] - first.properties[column]);
+    classes[layerName] = new Map(ordered.map((feature, index) => [
+        String(feature.properties.id),
+        rankClass(index + 1, ordered.length),
+    ]));
+});
+
+// Refresh the page ramp from the active CSS theme variables.
+function applyThemeRamp() {
+    ramp.forEach((colour, colourIndex) => {
+        const cssColour = getComputedStyle(root).getPropertyValue('--c' + colourIndex).trim();
+        ramp[colourIndex] = cssColour || colour;
+    });
+    pillarNames.forEach(name => {
+        pillarRamps[name] = ramp.map((colour, colourIndex) => {
+            return getComputedStyle(root).getPropertyValue('--' + name + '-' + colourIndex).trim();
+        });
+    });
+    Object.keys(placeColours).forEach(label => {
+        const name = label.replaceAll(' and ', '-').replaceAll(' ', '-');
+        placeColours[label] = getComputedStyle(root).getPropertyValue('--place-' + name).trim();
+    });
+    data.hotspot_order.forEach(key => {
+        hotspotColours[key] = getComputedStyle(root).getPropertyValue('--cluster-' + key.replace(' ', '-')).trim();
+    });
+}
+
+// Return the active secondary chart series colour.
+function chartSecondary() {
+    return getComputedStyle(root).getPropertyValue('--chart-secondary').trim();
+}
+
+applyThemeRamp();
+
+const map = L.map('map', {
+    scrollWheelZoom: false,
+    zoomSnap: 0.25,
+    attributionControl: false,
+});
+L.control.attribution({prefix: 'Leaflet'})
+    .addAttribution('Boundaries (c) ABS (SA2, 2021)')
+    .addTo(map);
+
+// Return the theme-aware neutral used for ordinary SA2 borders.
+function mapStroke() {
+    return getComputedStyle(root).getPropertyValue('--map-border').trim();
+}
+
+// Return the shared muted fill used for categories outside the current focus.
+function mapFade() {
+    return getComputedStyle(root).getPropertyValue('--map-fade').trim();
+}
+
+// Return the outline colour for the chosen SA2.
+function chosenOutline() {
+    return getComputedStyle(root).getPropertyValue('--chosen-ring').trim();
+}
+
+// Return the WCAG contrast ratio between two hex colours.
+function wcagContrast(first, second) {
+    const relativeLuminance = hexColour => {
+        const value = parseInt(hexColour.slice(1), 16);
+        const channels = [value >> 16 & 255, value >> 8 & 255, value & 255].map(channel => channel / 255);
+        const linear = channels.map(channel => {
+            return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    };
+    const values = [relativeLuminance(first), relativeLuminance(second)].sort((first_, second_) => second_ - first_);
+    return (values[0] + 0.05) / (values[1] + 0.05);
+}
+
+// Return the fixed dark or light chart-text colour, whichever contrasts better against the given
+// hex colour: for chart text that sits over a bar or tint of varying lightness.
+function readableTextColour(hexColour) {
+    const dark = getComputedStyle(root).getPropertyValue('--chart-text-dark').trim();
+    const light = getComputedStyle(root).getPropertyValue('--chart-text-light').trim();
+    return wcagContrast(dark, hexColour) >= wcagContrast(light, hexColour) ? dark : light;
+}
+
+// Return whether a temporary ranking is shown on the overall layer.
+function isOverallOverride() {
+    return currentLayer === 'overall' && mode !== 'baseline';
+}
+
+// Return the rank in the what-if state (weights or check), whichever layer is shown.
+function whatIfRank(properties) {
+    if (mode === 'weights') {
+        return custom.ranks[String(properties.id)];
+    }
+    if (mode === 'variant') {
+        return variantRanks[String(properties.id)]?.[variant];
+    }
+    return properties.rank;
+}
+
+// Return whether an SA2 has no score under the weights, because none of its pillars carries a weight.
+function hasNoWeightedScore(properties) {
+    return mode === 'weights' && custom.scores[String(properties.id)] === undefined;
+}
+
+// Return "score X, rank R of N" for an SA2 under the weights, or "no score".
+function weightsResult(properties) {
+    if (hasNoWeightedScore(properties)) {
+        return 'no score';
+    }
+    const code = String(properties.id);
+    return 'score ' + formatScore(custom.scores[code]) + ', rank ' + custom.ranks[code] + ' of ' + custom.count;
+}
+
+// Return the rank shown for a feature under the current map state.
+function shownRank(properties) {
+    if (!isOverallOverride()) {
+        return properties.rank;
+    }
+    return whatIfRank(properties);
+}
+
+// Return the fifth shown for a feature under the current map state.
+function shownClass(properties) {
+    if (!isOverallOverride()) {
+        return classes.overall.get(String(properties.id));
+    }
+    if (custom) {
+        return custom.classes[String(properties.id)];
+    }
+    return rankClass(shownRank(properties), scored.length);
+}
+
+// Return the value shown in the active map layer.
+function currentValue(properties) {
+    if (currentLayer === 'place_types') {
+        return properties.place_type;
+    }
+    if (isOverallOverride()) {
+        return custom ? custom.scores[String(properties.id)] : null;
+    }
+    return properties[layerColumn[currentLayer]];
+}
+
+// Return the plain-words name of a cluster class, such as "Not a cluster".
+function hotspotName(key) {
+    return data.layers.hotspots.labels[data.hotspot_order.indexOf(key)];
+}
+
+// Return the fill colour for one SA2 in the active map layer.
+function colour(properties) {
+    if (!properties.scored) {
+        return getComputedStyle(root).getPropertyValue('--unavailable').trim();
+    }
+    if (currentLayer === 'place_types') {
+        return placeColours[properties.place_type];
+    }
+    if (currentLayer === 'hotspots') {
+        return hotspotColours[properties.hotspot];
+    }
+    const colourIndex = currentLayer === 'overall'
+        ? shownClass(properties)
+        : classes[currentLayer].get(String(properties.id));
+    const activeRamp = currentLayer === 'overall' ? ramp : pillarRamps[currentLayer];
+    const unavailable = getComputedStyle(root).getPropertyValue('--unavailable').trim();
+    return colourIndex === undefined ? unavailable : activeRamp[colourIndex];
+}
+
+// Return the focused category for the active layer: a place type or hot-spot name on those
+// two layers, or a quintile index (0 bottom to 4 top) on the Overall layer and each pillar layer.
+function activeFocus() {
+    if (currentLayer === 'place_types') {
+        return focusedPlaceType;
+    }
+    if (currentLayer === 'hotspots') {
+        return focusedHotspot;
+    }
+    return focusedQuintile;
+}
+
+// Return whether this SA2 sits outside the category focused on the active layer.
+function categoryIsFaded(properties) {
+    const focus = activeFocus();
+    if (focus === null) {
+        return false;
+    }
+    if (currentLayer === 'place_types') {
+        return properties.place_type !== focus;
+    }
+    if (currentLayer === 'hotspots') {
+        return properties.hotspot !== focus;
+    }
+    const colourIndex = currentLayer === 'overall'
+        ? shownClass(properties)
+        : classes[currentLayer].get(String(properties.id));
+    return colourIndex !== focus;
+}
+
+// Return Leaflet path styling for one SA2 feature.
+function style(feature) {
+    const properties = feature.properties;
+    const chosen = String(properties.id) === selectedCode;
+    const highlighted = String(properties.id) === highlightCode;
+    const faded = categoryIsFaded(properties) && !chosen && !highlighted;
+    let weight = 0.65;
+    if (chosen) {
+        weight = 3;
+    } else if (highlighted) {
+        weight = 2;
+    }
+    return {
+        fillColor: faded ? mapFade() : colour(properties),
+        fillOpacity: properties.scored ? faded ? 0.38 : 0.9 : 0,
+        color: chosen ? chosenOutline() : highlighted ? placeColours[properties.place_type] : mapStroke(),
+        weight,
+        dashArray: null,
+    };
+}
+
+// Build the tooltip of the Hot spots layer: the cluster in plain words, the score against the neighbours' average,
+// the baseline rank, and the evidence for the cluster.
+function hotspotTooltip(properties) {
+    return '<strong>' + textValue(properties.name) + '</strong><br>' + hotspotName(properties.hotspot) +
+        '<br>Score ' + formatScore(properties.score) + ", neighbours' average " +
+        formatScore(properties.neighbour_average_score) +
+        '<br><small>Vibrancy score ' + formatScore(properties.score) + ', rank ' + formatWhole(properties.rank) +
+        ' of 372</small><br>Evidence: p = ' + Number(properties.hotspot_p_value).toFixed(3);
+}
+
+// Build the map tooltip for one SA2: the shown layer first, then the baseline facts.
+function tooltip(properties) {
+    const nameLine = '<strong>' + textValue(properties.name) + '</strong>';
+    if (!properties.scored) {
+        return nameLine + '<br>Not scored';
+    }
+    if (currentLayer === 'hotspots') {
+        return hotspotTooltip(properties);
+    }
+    const baselineScore = formatScore(properties.score);
+    const baselineRank = formatWhole(properties.rank);
+    let mainLine = '';
+    let smallLine = 'Vibrancy score ' + baselineScore + ', rank ' + baselineRank + ' of 372';
+    if (currentLayer === 'place_types') {
+        mainLine = textValue(properties.place_type);
+    } else if (currentLayer !== 'overall') {
+        mainLine = pillarScoreHtml(data.layers[currentLayer].name, currentValue(properties));
+    } else if (mode === 'weights') {
+        mainLine = hasNoWeightedScore(properties)
+            ? 'No score with these weights'
+            : 'Your weights: ' + weightsResult(properties);
+        smallLine = 'Baseline: score ' + baselineScore + ', rank ' + baselineRank + ' of 372';
+    } else if (mode === 'variant') {
+        mainLine = 'Rank in this check: ' + shownRank(properties) + ' (baseline: ' + baselineRank + ')';
+    } else {
+        mainLine = 'Vibrancy score ' + baselineScore;
+        smallLine = 'Rank ' + baselineRank + ' of 372';
+    }
+    const placeLine = currentLayer === 'place_types' ? '' : '<br>' + textValue(properties.place_type);
+    return nameLine + '<br>' + mainLine + '<br><small>' + smallLine + '</small>' + placeLine +
+        '<br>' + pillarScoreHtml('Intensity', properties.intensity) + ', ' +
+        pillarScoreHtml('Diversity', properties.diversity) + ', ' +
+        pillarScoreHtml('Design', properties.design) + '<br>' + textValue(properties.hotspot);
+}
+
+window.vibrancyTooltip = tooltip;
+
+const layer = L.geoJSON(data.geo, {
+    style,
+    onEachFeature(feature, item) {
+        item.bindTooltip(tooltip(feature.properties), {sticky: true});
+        item.on({
+            click: () => select(feature.properties.id),
+            mouseover: () => highlight(feature.properties.id, true),
+            mouseout: () => highlight(feature.properties.id, false),
+        });
+    },
+}).addTo(map);
+map.fitBounds(data.built_up_bounds);
+
+const mapPlaces = [
+    ['Sydney CBD', -33.87, 151.21],
+    ['Parramatta', -33.82, 151.00],
+    ['Liverpool', -33.92, 150.93],
+    ['Hurstville', -33.97, 151.10],
+];
+mapPlaces.forEach(([name, latitude, longitude]) => {
+    L.marker([latitude, longitude], {
+        interactive: false,
+        icon: L.divIcon({className: 'map-label', html: name}),
+    }).addTo(map);
+});
+
+// Return the short category label used in the current focus note.
+function focusLabel(layerName, category) {
+    if (layerName === 'hotspots') {
+        return hotspotName(category).split(':')[0];
+    }
+    if (layerName === 'place_types') {
+        return category;
+    }
+    return data.layers[layerName].labels[4 - category].split(':')[0];
+}
+
+// Update the separate note that explains the active category focus.
+function updateFocusLine() {
+    const line = document.querySelector('#focus-line');
+    const focus = activeFocus();
+    if (focus === null) {
+        line.hidden = true;
+        line.textContent = '';
+        return;
+    }
+    const total = currentLayer === 'place_types' ? 'four' : 'five';
+    line.textContent = 'Showing: ' + focusLabel(currentLayer, focus) +
+        ' only. Click again to show all ' + total + '.';
+    line.hidden = false;
+}
+
+// Keep the panel-three rows in sync with the place-type focus.
+function updateTypeRowStates() {
+    document.querySelectorAll('.type-row').forEach(row => {
+        const pressed = row.dataset.placeType === focusedPlaceType;
+        row.setAttribute('aria-pressed', String(pressed));
+    });
+}
+
+// Toggle one layer's focus without changing the independent focus of the other categorical layer.
+function toggleCategoryFocus(layerName, category) {
+    if (layerName === 'place_types') {
+        focusedPlaceType = focusedPlaceType === category ? null : category;
+    } else if (layerName === 'hotspots') {
+        focusedHotspot = focusedHotspot === category ? null : category;
+    } else {
+        focusedQuintile = focusedQuintile === category ? null : category;
+    }
+    setLayer(layerName);
+    return activeFocus();
+}
+
+// Activate a custom keyboard control with Enter or Space.
+function activateOnKeyboard(event, action) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        action();
+    }
+}
+
+// Clear every independent category focus (place type, hot spot, and quintile).
+function clearCategoryFocus() {
+    focusedPlaceType = null;
+    focusedHotspot = null;
+    focusedQuintile = null;
+    updateMap();
+}
+
+// Draw the current layer's key, including the class count beside every swatch.
+function renderLegend() {
+    const legend = document.querySelector('#legend');
+    legend.innerHTML = '';
+    updateFocusLine();
+    updateTypeRowStates();
+    if (isOverallOverride() && mode === 'variant') {
+        const labels = [
+            'Top quintile: ranks 1 to 75',
+            'Second quintile: ranks 76 to 149',
+            'Middle quintile: ranks 150 to 224',
+            'Fourth quintile: ranks 225 to 298',
+            'Bottom quintile: ranks 299 to 372',
+        ];
+        labels.forEach((label, index) => {
+            const colourIndex = 4 - index;
+            const count = scored.filter(feature => shownClass(feature.properties) === colourIndex).length;
+            legendItem(legend, label, ramp[colourIndex], count);
+        });
+        legendItem(legend, 'Not scored', 'transparent', '', true);
+        return;
+    }
+    if (isOverallOverride() && custom) {
+        const ranges = rankRangesByClass(custom.ranks, custom.classes);
+        const names = ['Top quintile', 'Second quintile', 'Middle quintile', 'Fourth quintile', 'Bottom quintile'];
+        names.forEach((name, index) => {
+            const colourIndex = 4 - index;
+            const range = ranges[colourIndex];
+            const count = scored.filter(feature => shownClass(feature.properties) === colourIndex).length;
+            legendItem(legend, name + ': ranks ' + range.min + ' to ' + range.max, ramp[colourIndex], count);
+        });
+        if (custom.unscoredCount > 0) {
+            legendItem(legend, 'No score with these weights', 'transparent', custom.unscoredCount, true);
+        }
+        legendItem(legend, 'Not scored', 'transparent', '', true);
+        return;
+    }
+    const layerDefinition = data.layers[currentLayer];
+    layerDefinition.labels.forEach((label, index) => {
+        let legendColour = currentLayer in pillarRamps ? pillarRamps[currentLayer][4 - index] : ramp[4 - index];
+        let focusCategory = null;
+        if (currentLayer === 'place_types') {
+            legendColour = placeColours[label];
+            focusCategory = label;
+        } else if (currentLayer === 'hotspots') {
+            focusCategory = data.hotspot_order[index];
+            legendColour = hotspotColours[focusCategory];
+        } else {
+            focusCategory = 4 - index;
+        }
+        legendItem(legend, label, legendColour, layerDefinition.counts[index], false, focusCategory);
+    });
+    if (layerDefinition.unavailable) {
+        const unavailableColour = getComputedStyle(root).getPropertyValue('--unavailable').trim();
+        legendItem(legend, 'Not available', unavailableColour, layerDefinition.unavailable);
+    }
+    legendItem(legend, 'Not scored', 'transparent', '', true);
+}
+
+// Return the lowest and highest rank in each of the five quintile classes of a ranking, for the
+// weights-mode legend: the same rank-range wording the variant mode already uses.
+function rankRangesByClass(ranks, classes) {
+    const ranges = [null, null, null, null, null];
+    Object.keys(ranks).forEach(code => {
+        const level = classes[code];
+        const rank = ranks[code];
+        if (ranges[level] === null) {
+            ranges[level] = {min: rank, max: rank};
+        } else {
+            ranges[level].min = Math.min(ranges[level].min, rank);
+            ranges[level].max = Math.max(ranges[level].max, rank);
+        }
+    });
+    return ranges;
+}
+
+// Add one compact legend item, optionally as a category-focus button.
+function legendItem(legend, label, legendColour, count, hollow = false, focusCategory = null) {
+    const interactive = focusCategory !== null;
+    const item = document.createElement(interactive ? 'button' : 'span');
+    item.className = 'legend-item' + (interactive ? ' legend-choice' : '');
+    const swatch = document.createElement('i');
+    swatch.className = 'swatch' + (hollow ? ' hollow' : '');
+    swatch.style.background = legendColour;
+    const suffix = count === '' ? '' : ' (' + count + ')';
+    item.append(swatch, document.createTextNode(label + suffix));
+    if (interactive) {
+        const focused = activeFocus();
+        item.type = 'button';
+        item.dataset.focusLayer = currentLayer;
+        item.dataset.focusCategory = focusCategory;
+        item.setAttribute('aria-pressed', String(focused === focusCategory));
+        item.classList.toggle('dimmed', focused !== null && focused !== focusCategory);
+        item.onclick = () => toggleCategoryFocus(item.dataset.focusLayer, focusCategory);
+        item.onkeydown = event => {
+            activateOnKeyboard(event, () => toggleCategoryFocus(item.dataset.focusLayer, focusCategory));
+        };
+    }
+    legend.append(item);
+}
+
+// Refresh map styling, tooltips, and its legend.
+function updateMap() {
+    layer.setStyle(style);
+    layer.eachLayer(item => {
+        item.setTooltipContent(tooltip(item.feature.properties));
+        const element = item.getElement();
+        if (element) {
+            element.classList.toggle('chosen-halo', String(item.feature.properties.id) === selectedCode);
+        }
+    });
+    renderLegend();
+}
+
+// Switch the map to a named baseline layer. An actual change of layer clears any quintile
+// focus (Overall and each pillar share the one focus, since only one of them is ever shown);
+// toggleCategoryFocus also calls this to refresh the layer it already set the focus on, so
+// that in-place refresh must not wipe out the focus it just set.
+function setLayer(name) {
+    if (name !== currentLayer) {
+        focusedQuintile = null;
+    }
+    currentLayer = name;
+    document.querySelectorAll('.layer').forEach(button => {
+        button.setAttribute('aria-pressed', button.dataset.layer === name);
+    });
+    updateMap();
+    return name;
+}
+
+// Say how common a value of exactly zero is among the scored SA2s.
+function zeroComparison(key) {
+    const zeroCount = scored.filter(feature => numberValue(feature.properties[key]) === 0).length;
+    if (zeroCount === 1) {
+        return 'none, as in no other SA2';
+    }
+    const share = zeroCount / scored.length * 100;
+    if (share < 1) {
+        return 'none, as in fewer than 1% of SA2s';
+    }
+    return 'none, as in ' + Math.round(share) + '% of SA2s';
+}
+
+// Say how a non-zero density compares with the scored SA2s. From the 50th percentile up it is "higher than X%"
+// (the share at or below it); below that it is "lower than Y%" (the share strictly above it).
+// Halves round up, and 99 is the cap.
+function densityComparison(density, key) {
+    const atOrBelow = scored.filter(feature => numberValue(feature.properties[key]) <= density).length;
+    if (atOrBelow * 2 >= scored.length) {
+        return 'higher than ' + Math.min(99, Math.round(atOrBelow / scored.length * 100)) + '% of SA2s';
+    }
+    const above = scored.filter(feature => numberValue(feature.properties[key]) > density).length;
+    return 'lower than ' + Math.min(99, Math.round(above / scored.length * 100)) + '% of SA2s';
+}
+
+// Build one fact line. A small density is shown as the SA2's total, and its second line compares the density.
+function factLine(properties, fact) {
+    const density = numberValue(properties[fact.key]);
+    if (density === null) {
+        return '<li><strong>' + fact.label + ': n/a</strong></li>';
+    }
+    if (density >= fact.limit) {
+        const unit = Math.round(density) === 1 ? fact.units[0] : fact.units[1];
+        return '<li><strong>' + formatWhole(density) + ' ' + unit + '</strong><span>' +
+            densityComparison(density, fact.key) + '</span></li>';
+    }
+    const total = numberValue(properties[fact.totalKey]);
+    const noun = total === 1 ? fact.nouns[0] : fact.nouns[1];
+    const comparison = density === 0 ? zeroComparison(fact.key) : 'density ' + densityComparison(density, fact.key);
+    return '<li><strong>' + formatWhole(total) + ' ' + noun + ' in total</strong><span>' + comparison + '</span></li>';
+}
+
+// Describe the local Moran class in plain language.
+function hotspotLabel(value) {
+    const labels = {
+        'high-high': 'high-high cluster',
+        'low-low': 'low-low cluster',
+        'high-low': 'high-low outlier',
+        'low-high': 'low-high outlier',
+        'not significant': 'not a cluster',
+    };
+    return labels[value] || textValue(value);
+}
+
+// Return the CSS suffix used by the four place-type colours.
+function placeClass(label) {
+    return label.replaceAll(' and ', '-').replaceAll(' ', '-');
+}
+
+// Return one coloured pillar name and score for a tooltip.
+function pillarScoreHtml(label, value) {
+    const name = label.toLowerCase();
+    return '<span class="pillar-text ' + name + '-text">' + label + ' ' + formatScore(value) + '</span>';
+}
+
+// Build one fixed-axis pillar row for a selected SA2 profile.
+function profilePillar(label, value) {
+    const name = label.toLowerCase();
+    const number = numberValue(value);
+    if (number === null) {
+        return [
+            '<div class="pillar ' + name + '" data-pillar="' + name + '">',
+            '<span>' + label + '</span>',
+            '<div class="bar missing"></div>',
+            '<b><span>n/a</span></b>',
+            '</div>',
+        ].join('');
+    }
+    const clipped = Math.max(70, Math.min(130, number));
+    const offScale = number < 70 || number > 130 ? '<small>off scale</small>' : '';
+    const offset = (clipped - 100) / 30 * 50;
+    return [
+        '<div class="pillar ' + name + '" data-pillar="' + name + '">',
+        '<span>' + label + '</span>',
+        '<div class="bar" style="--offset:' + offset + '%"><i></i></div>',
+        '<b><span>' + formatScore(number) + '</span>' + offScale + '</b>',
+        '</div>',
+    ].join('');
+}
+
+// Build the accessible map profile card for one SA2.
+function profileHtml(properties) {
+    const close = '<button class="close" aria-label="Close profile">×</button>';
+    if (!properties.scored) {
+        return [
+            close,
+            '<h3>' + textValue(properties.name) + '</h3>',
+            '<p class="profile-score">Not scored</p>',
+            '<p class="profile-meta">This SA2 has no residents or registered businesses, ',
+            'so the screening score is not calculated.</p>',
+        ].join('');
+    }
+    const pillars = [
+        profilePillar('Intensity', properties.intensity),
+        profilePillar('Diversity', properties.diversity),
+        profilePillar('Design', properties.design),
+    ].join('');
+    const flag = properties.flag && properties.flag.includes('no Diversity') ?
+        'Diversity is missing, so this SA2 is scored on Intensity and Design.' :
+        textValue(properties.flag || '');
+    const variantLine = mode === 'variant' ? '<br>Rank in this check: ' +
+        whatIfRank(properties) + ' (baseline: ' + properties.rank + ')' : '';
+    const weightsLine = mode === 'weights'
+        ? '<p class="profile-meta">With your weights: ' + weightsResult(properties) + '</p>'
+        : '';
+    const facts = factDefinitions.map(fact => factLine(properties, fact)).join('');
+    return [
+        close,
+        '<h3>' + textValue(properties.name) + '</h3>',
+        '<span class="type-' + placeClass(properties.place_type) + '">',
+        '<span class="type-chip">' + textValue(properties.place_type) + '</span>',
+        '</span>',
+        '<p class="profile-score">Score ' + formatScore(properties.score) + '</p>',
+        weightsLine,
+        '<p class="profile-meta">Rank ' + properties.rank + ' of 372, ranks ' +
+            properties.rank_min + ' to ' + properties.rank_max + ' across the variants' + variantLine + '</p>',
+        '<div class="axis-labels"><span>70</span><span>Greater Sydney average</span><span>130</span></div>',
+        pillars,
+        '<ul class="facts">' + facts + '</ul>',
+        '<p class="profile-meta">Residents: ' + formatWhole(properties.residents) + '<br>Median income: ' +
+            formatWhole(properties.median_income) + '<br>Hot spot: ' + hotspotLabel(properties.hotspot) +
+            "<br>Neighbours' average score: " + formatScore(properties.neighbour_average_score) +
+            (flag ? '<br>' + flag : '') + '</p>',
+    ].join('');
+}
+
+// Rebuild the open profile card so it matches the current what-if state.
+function refreshProfile() {
+    if (selectedCode === null) {
+        return;
+    }
+    const profile = document.querySelector('#profile');
+    profile.innerHTML = profileHtml(byCode.get(selectedCode).properties);
+    profile.querySelector('.close').onclick = closeProfile;
+}
+
+// Open the profile card for one SA2 and fly the map to it.
+function select(code) {
+    const feature = byCode.get(String(code));
+    if (!feature) {
+        return false;
+    }
+    selectedCode = String(code);
+    refreshProfile();
+    const profile = document.querySelector('#profile');
+    profile.hidden = false;
+    profile.querySelector('.close').focus();
+    map.flyToBounds(L.geoJSON(feature).getBounds(), {
+        maxZoom: 13,
+        animate: !matchMedia('(prefers-reduced-motion: reduce)').matches,
+    });
+    updateMap();
+    renderRows();
+    return true;
+}
+
+// Close the selected-SA2 profile card.
+function closeProfile() {
+    selectedCode = null;
+    document.querySelector('#profile').hidden = true;
+    updateMap();
+    renderRows();
+}
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+        closeProfile();
+    }
+});
+
+// Temporarily outline one SA2 and its open table row.
+function highlight(code, on) {
+    highlightCode = on ? String(code) : null;
+    updateMap();
+    document.querySelectorAll('.data-row').forEach(row => {
+        row.classList.toggle('active', on && row.dataset.code === String(code));
+    });
+    return true;
+}
+
+// Find an SA2 by name, select it, and fly the map there.
+function search(value) {
+    const wanted = String(value).trim().toLowerCase();
+    const feature = data.geo.features.find(record => record.properties.name.toLowerCase() === wanted);
+    document.querySelector('#search-message').textContent = feature ? '' : 'No matching SA2.';
+    return feature ? select(feature.properties.id) : false;
+}
+
+data.geo.features.forEach(feature => {
+    const option = document.createElement('option');
+    option.value = feature.properties.name;
+    document.querySelector('#sa2-names').append(option);
+});
+
+document.querySelector('#map-search').onchange = event => search(event.target.value);
+document.querySelector('#map-search').onkeydown = event => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        search(event.target.value);
+    }
+};
+document.querySelector('#search-clear').onclick = () => {
+    document.querySelector('#map-search').value = '';
+    document.querySelector('#search-message').textContent = '';
+    closeProfile();
+    map.fitBounds(data.built_up_bounds);
+};
+
+const views = {
+    metro: data.built_up_bounds,
+    inner: [[-33.94, 151.14], [-33.78, 151.29]],
+    parramatta: [[-33.87, 150.94], [-33.75, 151.07]],
+    liverpool: [[-33.98, 150.88], [-33.86, 150.99]],
+};
+document.querySelectorAll('.view').forEach(button => {
+    button.onclick = () => {
+        document.querySelectorAll('.view').forEach(viewButton => {
+            viewButton.setAttribute('aria-pressed', 'false');
+        });
+        button.setAttribute('aria-pressed', 'true');
+        map.fitBounds(views[button.dataset.view]);
+    };
+});
+document.querySelectorAll('.layer').forEach(button => {
+    button.onclick = () => setLayer(button.dataset.layer);
+});
+document.querySelectorAll('.jump-layer').forEach(button => {
+    button.onclick = () => {
+        setLayer(button.dataset.layer);
+        document.querySelector('#where').scrollIntoView({behavior: 'smooth'});
+    };
+});
+document.querySelector('#theme').onchange = event => {
+    root.dataset.theme = event.target.value;
+    applyThemeRamp();
+    updateMap();
+    drawCharts();
+};
+
+// Return scored SA2s in the current table sort order.
+function orderedRows() {
+    return [...scored].sort((first, second) => {
+        const firstValue = first.properties[sortColumn];
+        const secondValue = second.properties[sortColumn];
+        const comparison = typeof firstValue === 'number'
+            ? firstValue - secondValue
+            : textValue(firstValue).localeCompare(textValue(secondValue));
+        return sortDirection === 'asc' ? comparison : -comparison;
+    });
+}
+
+// Render the searchable score table.
+function renderRows() {
+    const query = document.querySelector('#filter').value.toLowerCase();
+    const body = document.querySelector('#rows');
+    body.innerHTML = '';
+    const rows = orderedRows().filter(feature => feature.properties.name.toLowerCase().includes(query));
+    rows.forEach(feature => {
+        const properties = feature.properties;
+        const row = document.createElement('tr');
+        row.className = 'data-row';
+        row.dataset.code = properties.id;
+        const values = [
+            formatScore(properties.score),
+            formatWhole(properties.rank),
+            properties.name,
+            properties.place_type,
+            properties.hotspot,
+            formatScore(properties.intensity),
+            formatScore(properties.diversity),
+            formatScore(properties.design),
+            formatWhole(properties.residents),
+            formatWhole(properties.median_income),
+        ];
+        values.forEach(value => {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            row.append(cell);
+        });
+        row.onclick = () => select(properties.id);
+        row.onmouseenter = () => highlight(properties.id, true);
+        row.onmouseleave = () => highlight(properties.id, false);
+        body.append(row);
+    });
+    document.querySelector('#table-count').textContent = rows.length + ' of 372 rows';
+}
+
+// Change the table sort column and direction.
+function sortTable(column, direction) {
+    const changed = sortColumn !== column;
+    sortColumn = column;
+    sortDirection = direction || (changed ? 'desc' : sortDirection === 'desc' ? 'asc' : 'desc');
+    document.querySelectorAll('th').forEach(header => header.setAttribute('aria-sort', 'none'));
+    const header = document.querySelector('.sort[data-sort="' + column + '"]').parentElement;
+    header.setAttribute('aria-sort', sortDirection === 'asc' ? 'ascending' : 'descending');
+    renderRows();
+    return sortDirection;
+}
+
+document.querySelectorAll('.sort').forEach(button => {
+    button.onclick = () => sortTable(button.dataset.sort);
+});
+document.querySelector('#filter').oninput = renderRows;
+
+// Return table data as a quoted CSV in the current sort order.
+function csv() {
+    const header = [
+        'Score', 'Rank', 'SA2', 'Place type', 'Hot spot', 'Intensity',
+        'Diversity', 'Design', 'Residents', 'Median income',
+    ];
+    const quote = value => '"' + String(value ?? '').replaceAll('"', '""') + '"';
+    const lines = [header.map(quote).join(',')];
+    orderedRows().forEach(feature => {
+        const properties = feature.properties;
+        lines.push([
+            properties.score, properties.rank, properties.name, properties.place_type,
+            properties.hotspot, properties.intensity, properties.diversity, properties.design,
+            properties.residents, properties.median_income,
+        ].map(quote).join(','));
+    });
+    return lines.join('\n');
+}
+
+document.querySelector('#download').onclick = () => {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([csv()], {type: 'text/csv'}));
+    link.download = 'greater-sydney-vibrancy-scores.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+};
+document.querySelectorAll('.type-row').forEach(row => {
+    const activate = () => {
+        toggleCategoryFocus('place_types', row.dataset.placeType);
+        document.querySelector('#where').scrollIntoView({behavior: 'smooth'});
+    };
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+    row.setAttribute('aria-pressed', 'false');
+    row.onclick = activate;
+    row.onkeydown = event => activateOnKeyboard(event, activate);
+});
+
+const variantRanks = Object.fromEntries(data.variant_ranks.map(record => [
+    String(record.sa2_code),
+    record,
+]));
+
+// Turn values into a descending rank lookup.
+function ranksFromValues(values) {
+    const ordered = [...values].sort((first, second) => second.value - first.value);
+    const ranks = {};
+    ordered.forEach((record, index) => {
+        ranks[record.code] = index + 1;
+    });
+    return ranks;
+}
+
+// Return Spearman correlation after ranking two equal-length value arrays.
+function spearman(firstValues, secondValues) {
+    const count = firstValues.length;
+    const firstRanks = ranksFromValues(firstValues.map((value, index) => ({code: index, value})));
+    const secondRanks = ranksFromValues(secondValues.map((value, index) => ({code: index, value})));
+    const mean = (count + 1) / 2;
+    let numerator = 0;
+    let firstSquares = 0;
+    let secondSquares = 0;
+    for (let i = 0; i < count; i += 1) {
+        const firstDifference = firstRanks[i] - mean;
+        const secondDifference = secondRanks[i] - mean;
+        numerator += firstDifference * secondDifference;
+        firstSquares += firstDifference * firstDifference;
+        secondSquares += secondDifference * secondDifference;
+    }
+    return numerator / Math.sqrt(firstSquares * secondSquares);
+}
+
+// Return one weighted average of the pillar z-scores for each SA2 that has a weighted pillar.
+// A missing pillar carries no weight, so the other weights are rescaled to sum to one.
+function weightedAverages(inputs) {
+    const averages = [];
+    scored.forEach(feature => {
+        const properties = feature.properties;
+        const values = [properties.intensity_z, properties.diversity_z, properties.design_z];
+        let totalWeight = 0;
+        let weightedTotal = 0;
+        values.forEach((value, index) => {
+            if (value !== null) {
+                totalWeight += inputs[index];
+                weightedTotal += value * inputs[index];
+            }
+        });
+        // With no weighted pillar there is nothing to average, so this SA2 gets no score.
+        if (totalWeight > 0) {
+            averages.push({code: String(properties.id), value: weightedTotal / totalWeight});
+        }
+    });
+    return averages;
+}
+
+// Score, rank, and split into fifths the SA2s that have a score under the weights.
+function weightedRanking(inputs) {
+    const averages = weightedAverages(inputs);
+    const mean = averages.reduce((sum, record) => sum + record.value, 0) / averages.length;
+    const variance = averages.reduce((sum, record) => sum + (record.value - mean) ** 2, 0) / averages.length;
+    const standardDeviation = Math.sqrt(variance);
+    const scores = Object.fromEntries(averages.map(record => [
+        record.code,
+        100 + 10 * (record.value - mean) / standardDeviation,
+    ]));
+    const ranks = ranksFromValues(averages);
+    const weightedClasses = Object.fromEntries(Object.entries(ranks).map(([code, rank]) => [
+        code,
+        rankClass(rank, averages.length),
+    ]));
+    return {
+        scores,
+        ranks,
+        classes: weightedClasses,
+        count: averages.length,
+        unscoredCount: scored.length - averages.length,
+    };
+}
+
+// Return the scored SA2s that have a score under a weighted ranking.
+function featuresWithWeightedScore(ranking) {
+    return scored.filter(feature => ranking.ranks[String(feature.properties.id)] !== undefined);
+}
+
+// Return the sentence that says how many SA2s move to a different quintile.
+function fifthChangeSentence(changedCount) {
+    if (changedCount === 0) {
+        return 'No SA2 moves to a different quintile.';
+    }
+    if (changedCount === 1) {
+        return '1 SA2 moves to a different quintile.';
+    }
+    return changedCount + ' SA2s move to a different quintile.';
+}
+
+// Return the summary sentence shared by the weight and sensitivity-variant what-if modes: the
+// Spearman correlation with the baseline, how many of the baseline's top 25 stay in the top 25
+// (the sensitivity table's own definition), and how many of the baseline's top quintile stay in
+// the top quintile. rankOf and classOf return a code's new rank or quintile class, or undefined
+// for a code that has no score under the weights.
+function rankingSummary(spearmanText, rankOf, classOf) {
+    const baselineTop25 = scored.filter(feature => feature.properties.rank <= 25);
+    const keptTop25 = baselineTop25.filter(feature => {
+        const rank = rankOf(String(feature.properties.id));
+        return rank !== undefined && rank <= 25;
+    }).length;
+    const baselineTopQuintile = scored.filter(feature => feature.properties.rank_class === 4);
+    const keptTopQuintile = baselineTopQuintile.filter(feature => {
+        return classOf(String(feature.properties.id)) === 4;
+    }).length;
+    return 'Spearman correlation with the baseline ranking: ' + spearmanText + '. ' +
+        keptTop25 + ' of the baseline’s top 25 stay in the top 25. ' +
+        keptTopQuintile + ' of the baseline’s ' + baselineTopQuintile.length +
+        ' top-quintile SA2s stay in the top quintile.';
+}
+
+// Return the summary line that compares a weighted ranking with the baseline.
+function weightsSummary(ranking) {
+    const withScore = featuresWithWeightedScore(ranking);
+    const baselineRanks = withScore.map(feature => feature.properties.rank);
+    const weightedRanks = withScore.map(feature => ranking.ranks[String(feature.properties.id)]);
+    const correlation = spearman(baselineRanks, weightedRanks);
+    return rankingSummary(
+        correlation.toFixed(2),
+        code => ranking.ranks[code],
+        code => ranking.classes[code],
+    );
+}
+
+// Return a ranking-shaped object for one sensitivity check, so showBiggestMovers can reuse the
+// same biggest-movers list it already builds for the weight sliders and presets.
+function variantRanking(variant) {
+    const ranks = {};
+    scored.forEach(feature => {
+        const rank = variantRanks[String(feature.properties.id)]?.[variant];
+        if (rank !== undefined) {
+            ranks[String(feature.properties.id)] = rank;
+        }
+    });
+    return {ranks};
+}
+
+// List the ten SA2s whose rank changes most. Each name is a button that selects the SA2 on the map.
+function showBiggestMovers(ranking) {
+    const moves = featuresWithWeightedScore(ranking).map(feature => ({
+        properties: feature.properties,
+        rank: ranking.ranks[String(feature.properties.id)],
+    }));
+    moves.sort((first, second) => Math.abs(second.rank - second.properties.rank) -
+        Math.abs(first.rank - first.properties.rank));
+    const list = document.querySelector('#rank-moves');
+    list.innerHTML = '';
+    moves.slice(0, 10).forEach(record => {
+        const code = record.properties.id;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'link-button';
+        button.textContent = textValue(record.properties.name);
+        button.onclick = () => select(code);
+        button.onmouseenter = () => highlight(code, true);
+        button.onmouseleave = () => highlight(code, false);
+        button.onfocus = () => highlight(code, true);
+        button.onblur = () => highlight(code, false);
+        const item = document.createElement('li');
+        item.append(button, document.createTextNode(': ' + record.properties.rank + ' → ' + record.rank));
+        list.append(item);
+    });
+}
+
+// Show the share each slider carries in the total, and return the three shares.
+function showWeightShares(inputs) {
+    const inputTotal = inputs.reduce((sum, value) => sum + value, 0);
+    const shares = inputs.map(value => Math.round(value / inputTotal * 100) || 0);
+    pillarNames.forEach((name, index) => {
+        document.querySelector('#' + name + '-pct').textContent = shares[index] + '%';
+    });
+    return shares;
+}
+
+// Empty the drawer's summary lines and its list of movers.
+function clearSummaries() {
+    document.querySelector('#weight-summary').textContent = '';
+    document.querySelector('#rank-moves').innerHTML = '';
+    document.querySelector('#variant-summary').textContent = '';
+}
+
+// Recalculate overall scores, ranks, and fifths from the three weight sliders.
+function calculateWeights() {
+    const inputs = pillarNames.map(name => Number(document.querySelector('#weight-' + name).value));
+    const shares = showWeightShares(inputs);
+    if (inputs.every(value => value === 0)) {
+        // No weight means no score to calculate, so the last valid state stays on the page.
+        document.querySelector('#weight-summary').textContent = 'Give at least one pillar a weight above zero.';
+        return custom;
+    }
+    if (inputs[0] === inputs[1] && inputs[1] === inputs[2]) {
+        showBaseline();
+        return custom;
+    }
+    const ranking = weightedRanking(inputs);
+    clearSummaries();
+    document.querySelector('#weight-summary').textContent = weightsSummary(ranking);
+    showBiggestMovers(ranking);
+    custom = ranking;
+    mode = 'weights';
+    variant = 'Baseline';
+    document.querySelector('#variant-picker').value = 'Baseline';
+    document.querySelector('#state-line').textContent = 'Showing: your weights (Intensity ' +
+        shares[0] + '%, Diversity ' + shares[1] + '%, Design ' + shares[2] + '%)';
+    setLayer('overall');
+    refreshProfile();
+    return custom;
+}
+
+// Set the three sliders then recalculate the custom ranking.
+function setWeights(values) {
+    pillarNames.forEach((name, index) => {
+        document.querySelector('#weight-' + name).value = values[index];
+    });
+    calculateWeights();
+}
+
+let animationFrame;
+document.querySelectorAll('.drawer input[type=range]').forEach(input => {
+    input.oninput = () => {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = requestAnimationFrame(calculateWeights);
+    };
+});
+document.querySelectorAll('.preset').forEach(button => {
+    button.onclick = () => setWeights(button.dataset.weights.split(',').map(text => Number(text)));
+});
+
+// Show the baseline on the map and in the drawer, leaving the sliders where they are.
+function showBaseline() {
+    mode = 'baseline';
+    custom = null;
+    variant = 'Baseline';
+    document.querySelector('#variant-picker').value = 'Baseline';
+    document.querySelector('#state-line').textContent = 'Showing: baseline';
+    clearSummaries();
+    setLayer('overall');
+    refreshProfile();
+}
+
+// Restore the baseline sliders, map state, and labels.
+function setBaseline() {
+    setWeightsSilent(equalSliderValues);
+    showBaseline();
+}
+
+// Change slider controls without recalculating their values.
+function setWeightsSilent(values) {
+    pillarNames.forEach((name, index) => {
+        document.querySelector('#weight-' + name).value = values[index];
+    });
+    showWeightShares(values);
+}
+
+const picker = document.querySelector('#variant-picker');
+['Baseline', ...data.sensitivity.map(record => record.variant)].forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    picker.append(option);
+});
+picker.onchange = () => {
+    variant = picker.value;
+    if (variant === 'Baseline') {
+        setBaseline();
+        return;
+    }
+    mode = 'variant';
+    custom = null;
+    // "Intensity only" is the one check a weight setting can reproduce exactly, so its sliders
+    // move to that setting to show the match. Every other check still resets to neutral.
+    setWeightsSilent(variant === 'Intensity only' ? intensityOnlySliderValues : equalSliderValues);
+    clearSummaries();
+    document.querySelector('#state-line').textContent = 'Showing: check: ' + variant;
+    const sensitivity = data.sensitivity.find(record => record.variant === variant);
+    document.querySelector('#variant-summary').textContent = rankingSummary(
+        Number(sensitivity.spearman_rank_correlation).toFixed(2),
+        code => variantRanks[code]?.[variant],
+        code => {
+            const rank = variantRanks[code]?.[variant];
+            return rank === undefined ? undefined : rankClass(rank, scored.length);
+        },
+    );
+    showBiggestMovers(variantRanking(variant));
+    setLayer('overall');
+    refreshProfile();
+};
+document.querySelector('#baseline').onclick = setBaseline;
+document.querySelector('#try-what-if').onclick = () => {
+    const drawer = document.querySelector('#what-if');
+    drawer.open = true;
+    drawer.scrollIntoView({behavior: 'smooth'});
+};
+
+// The x and y axis title of every chart, kept in one list.
+const axisTitles = [
+    ['distance-chart', 'Distance from the CBD (km)', 'Vibrancy score'],
+    ['histogram-chart', 'Vibrancy score', 'SA2s in the bin'],
+    ['intensity-design-chart', 'Intensity score', 'Design score'],
+    ['density-diversity-chart', 'Density score (mean of Intensity and Design)', 'Diversity score'],
+    ['equity-chart', 'Median income group', "Share of the group's residents (%)"],
+    ['stability-chart', 'Median range of ranks across the 22 checks (places)', 'Baseline rank quintile'],
+    ['weekday-chart', 'Vibrancy score', 'Daily count, weekdays'],
+    ['weekend-chart', 'Vibrancy score', 'Daily count, weekends'],
+    ['moran-chart', 'Vibrancy score', 'Average score of neighbouring SA2s'],
+];
+const chartLineHeight = 16;
+// The first baseline of x tick labels sits this far under the axis, so they clear the y labels at the corner.
+const chartTickOffset = 20;
+
+// Return the x and y axis titles of one chart.
+function titlesOf(chartId) {
+    const row = axisTitles.find(item => item[0] === chartId);
+    return {x: row[1], y: row[2]};
+}
+
+// Create a responsive SVG chart and its shared tooltip. One unit of the drawing is one pixel.
+function setupChart(id, summary) {
+    const box = document.querySelector('#' + id);
+    box.innerHTML = '';
+    const tip = document.createElement('div');
+    tip.className = 'tooltip';
+    box.append(tip);
+    const width = Math.max(300, Math.round(box.clientWidth || 600));
+    const svgElement = svg('svg', {
+        viewBox: '0 0 ' + width + ' 260',
+        role: 'img',
+        'aria-label': summary,
+    });
+    const group = svg('g');
+    svgElement.append(group);
+    box.append(svgElement);
+    return {
+        s: group,
+        svg: svgElement,
+        tip,
+        width,
+        height: 260,
+        show(event, html) {
+            tip.innerHTML = html;
+            tip.style.display = 'block';
+            tip.style.left = (event.offsetX + 10) + 'px';
+            tip.style.top = (event.offsetY + 10) + 'px';
+        },
+        hide() {
+            tip.style.display = 'none';
+        },
+    };
+}
+
+// Set the height of a chart once its layout is known.
+function setChartHeight(chart, height) {
+    chart.height = Math.ceil(height);
+    chart.svg.setAttribute('viewBox', '0 0 ' + chart.width + ' ' + chart.height);
+}
+
+// Return the plot height of a chart: taller when the chart is wide.
+function plotHeightFor(chart) {
+    return Math.round(Math.min(300, Math.max(190, chart.width * 0.3)));
+}
+
+// Make one SVG mark interactive on pointer and touch devices.
+function mark(chart, element, code, html) {
+    let touched = false;
+    chart.s.append(element);
+    element.classList.add('mark');
+    if (code) {
+        element.dataset.code = code;
+    }
+    element.onmouseenter = event => {
+        if (code) {
+            highlight(code, true);
+        }
+        chart.show(event, html);
+    };
+    element.onmouseleave = () => {
+        if (code) {
+            highlight(code, false);
+        }
+        chart.hide();
+    };
+    element.ontouchstart = event => {
+        if (touched) {
+            if (code) {
+                select(code);
+            }
+            touched = false;
+        } else {
+            touched = true;
+            if (code) {
+                highlight(code, true);
+            }
+            chart.show({offsetX: 0, offsetY: 0}, html);
+        }
+        event.preventDefault();
+    };
+    element.onclick = () => {
+        if (!touched && code) {
+            select(code);
+        }
+    };
+    return element;
+}
+
+// Add a chart text label. Tick labels use the shared tick style.
+function addChartText(chart, x, y, value, anchor = 'start', className = 'tick') {
+    const label = svg('text', {
+        x, y, 'text-anchor': anchor, class: className
+    });
+    label.textContent = value;
+    chart.append(label);
+    return label;
+}
+
+// Add one chart text made of several lines. Each line is one tspan under the first baseline.
+function addChartLines(chart, x, y, lines, anchor, className) {
+    const label = svg('text', {
+        x, y, 'text-anchor': anchor, class: className
+    });
+    lines.forEach((line, index) => {
+        const part = svg('tspan', {
+            x, dy: index === 0 ? 0 : chartLineHeight
+        });
+        part.textContent = line;
+        label.append(part);
+    });
+    chart.append(label);
+    return label;
+}
+
+
+// Colour only the pillar words in an axis title, while leaving every title unchanged.
+function colourAxisTitle(label, title) {
+    const wholeTitleClasses = {
+        'Intensity score': 'intensity-title',
+        'Diversity score': 'diversity-title',
+        'Design score': 'design-title',
+    };
+    if (wholeTitleClasses[title]) {
+        label.classList.add(wholeTitleClasses[title]);
+    }
+    if (title === 'Density score (mean of Intensity and Design)') {
+        [...label.querySelectorAll('tspan')].forEach(line => {
+            const pieces = line.textContent.split(/(Intensity|Design)/);
+            line.textContent = '';
+            pieces.forEach(piece => {
+                const part = svg('tspan', {
+                    class: piece === 'Intensity' ? 'intensity-title' : piece === 'Design' ? 'design-title' : '',
+                });
+                part.textContent = piece;
+                line.append(part);
+            });
+        });
+    }
+    return label;
+}
+
+// Add a wrapped axis title, then apply the pillar colour roles to its words.
+function addAxisTitle(chart, x, y, lines, anchor, className, title) {
+    const label = addChartLines(chart, x, y, lines, anchor, className);
+    return colourAxisTitle(label, title);
+}
+// Return the width in pixels of a piece of chart text.
+function chartTextWidth(chart, value) {
+    const probe = addChartText(chart, 0, 0, value.trimEnd());
+    const width = probe.getComputedTextLength();
+    probe.remove();
+    return width;
+}
+
+// Return the pieces of a text where a line may end: after a space or after a hyphen.
+function wrapPieces(value) {
+    return value.match(/.+?(?:-|\s+|$)/g) || [value];
+}
+
+// Split pieces into two lines whose longer line is as short as possible.
+function balancedLines(chart, pieces) {
+    let best = null;
+    for (let i = 1; i < pieces.length; i += 1) {
+        const first = pieces.slice(0, i).join('');
+        const second = pieces.slice(i).join('');
+        const widest = Math.max(chartTextWidth(chart, first), chartTextWidth(chart, second));
+        if (best === null || widest < best.widest) {
+            best = {lines: [first, second], widest};
+        }
+    }
+    return best.lines;
+}
+
+// Split a text into lines that are no wider than maxWidth pixels. The lines join back into the text.
+function wrapChartText(chart, value, maxWidth) {
+    if (chartTextWidth(chart, value) <= maxWidth) {
+        return [value];
+    }
+    const pieces = wrapPieces(value);
+    const lines = [];
+    let current = '';
+    pieces.forEach(piece => {
+        if (current !== '' && chartTextWidth(chart, current + piece) > maxWidth) {
+            lines.push(current);
+            current = piece;
+        } else {
+            current += piece;
+        }
+    });
+    lines.push(current);
+    return lines.length === 2 ? balancedLines(chart, pieces) : lines;
+}
+
+// Lay out a chart and draw its titles. Return the plot box in pixels.
+// spec holds the titles; layout holds the plot sides, plot height and lines of x tick labels.
+function chartFrame(chart, spec, layout) {
+    let baseline = 16;
+    if (spec.chartTitle) {
+        addChartText(chart.s, 4, baseline, spec.chartTitle, 'start', 'chart-title');
+        if (spec.chartNote) {
+            addChartText(chart.s, chart.width - 8, baseline, spec.chartNote, 'end');
+        }
+        baseline += chartLineHeight + 4;
+    }
+    const yTitleLines = wrapChartText(chart.s, spec.yTitle, chart.width - 12);
+    addAxisTitle(chart.s, 4, baseline, yTitleLines, 'start', 'tick axis-title axis-title-y', spec.yTitle);
+    baseline += chartLineHeight * (yTitleLines.length - 1);
+    const top = baseline + 14 + (spec.extraTop || 0);
+    const bottom = top + layout.plotHeight;
+    const centre = (layout.left + layout.right) / 2;
+    const titleWidth = 2 * Math.min(centre, chart.width - centre) - 8;
+    const xTitleLines = wrapChartText(chart.s, spec.xTitle, titleWidth);
+    const titleBaseline = bottom + chartTickOffset + chartLineHeight * (layout.xLabelLines - 1) + 20;
+    addAxisTitle(chart.s, centre, titleBaseline, xTitleLines, 'middle', 'tick axis-title axis-title-x', spec.xTitle);
+    setChartHeight(chart, titleBaseline + chartLineHeight * (xTitleLines.length - 1) + 10);
+    return {left: layout.left, right: layout.right, top, bottom};
+}
+
+// Draw the horizontal and vertical axis lines of a plot, after its gridlines.
+function drawAxisLines(chart, frame) {
+    chart.s.append(svg('line', {
+        x1: frame.left, x2: frame.right, y1: frame.bottom, y2: frame.bottom, class: 'axis'
+    }));
+    chart.s.append(svg('line', {
+        x1: frame.left, x2: frame.left, y1: frame.top, y2: frame.bottom, class: 'axis'
+    }));
+}
+
+// Draw one y tick label. No gridline: the axis ticks alone are enough to read a value by.
+function drawYTick(chart, frame, y, label) {
+    addChartText(chart.s, frame.left - 6, y + 4, label, 'end', 'tick tick-y');
+}
+
+// Draw one x tick label. No gridline: the axis ticks alone are enough to read a value by.
+function drawXTick(chart, frame, x, label) {
+    addChartText(chart.s, x, frame.bottom + chartTickOffset, label, 'middle', 'tick tick-x');
+}
+
+// Return regularly spaced whole-number tick values.
+function roundedTicks(lower, upper, step) {
+    const ticks = [];
+    for (let value = lower; value <= upper; value += step) {
+        ticks.push(value);
+    }
+    return ticks;
+}
+
+// Choose a round whole-number step that leaves four to six tick labels.
+function tickStep(lower, upper, preferred) {
+    const span = upper - lower;
+    const candidates = preferred || [10, 20, 25, 50, 100, 1000, 5000, 10000];
+    return candidates.find(step => span / step >= 3 && span / step <= 5) || candidates[candidates.length - 1];
+}
+
+// Choose a round step for a bar axis and put the axis top one tick above the tallest bar.
+function valueAxis(maximum, mostIntervals) {
+    const steps = [5, 10, 20, 25, 50, 100, 200];
+    const step = steps.find(candidate => Math.floor(maximum / candidate) + 1 <= mostIntervals) || 200;
+    return {step, top: (Math.floor(maximum / step) + 1) * step};
+}
+
+// Draw numeric axes, gridlines, tick labels, and titles. Return the plot box.
+function drawNumericAxes(chart, xRange, yRange, spec) {
+    const xStep = spec.xStep || tickStep(xRange[0], xRange[1], [10, 20, 25, 50]);
+    const yStep = spec.yStep || tickStep(yRange[0], yRange[1], [10, 20, 25, 50, 1000, 5000, 10000]);
+    const xTicks = roundedTicks(xRange[0], xRange[1], xStep);
+    const yTicks = roundedTicks(yRange[0], yRange[1], yStep);
+    const widest = Math.max(...yTicks.map(value => chartTextWidth(chart.s, formatWhole(value))));
+    const frame = chartFrame(chart, spec, {
+        left: Math.ceil(widest) + 14,
+        right: chart.width - 16,
+        plotHeight: spec.plotHeight || plotHeightFor(chart),
+        xLabelLines: 1,
+    });
+    xTicks.forEach(value => {
+        drawXTick(chart, frame, scale(value, xRange[0], xRange[1], frame.left, frame.right), formatWhole(value));
+    });
+    yTicks.forEach(value => {
+        drawYTick(chart, frame, scale(value, yRange[0], yRange[1], frame.bottom, frame.top), formatWhole(value));
+    });
+    drawAxisLines(chart, frame);
+    return frame;
+}
+
+// Return the groups of the distance chart: their name, their SA2s, and their median score.
+function distanceGroups() {
+    const bands = [
+        [0, 5, 'Within 5 km'],
+        [5, 10, '5 to 10 km'],
+        [10, 20, '10 to 20 km'],
+        [20, 40, '20 to 40 km'],
+        [40, 1e6, 'Over 40 km'],
+    ];
+    return bands.map(band => {
+        const values = scored.filter(feature => feature.properties.distance_km >= band[0] &&
+            feature.properties.distance_km < band[1]);
+        const scores = values.map(feature => feature.properties.score).sort((first, second) => first - second);
+        return {name: band[2], values, median: scores[Math.floor(scores.length / 2)]};
+    });
+}
+
+// Return the three label lines of a distance group: its name, its median score, and its number of SA2s.
+function distanceLabelLines(group, shortMedian) {
+    const median = (shortMedian ? 'med. ' : 'median ') + formatScore(group.median);
+    return [group.name, median, 'n = ' + group.values.length];
+}
+
+// Choose how the group labels are laid out so that no line wraps. Try the full wording in one row,
+// then "med." in one row, then two staggered rows, where a label may use two columns.
+function chooseDistanceLabels(chart, groups, slot) {
+    const gap = 4;
+    const options = [
+        {shortMedian: false, rows: 1},
+        {shortMedian: true, rows: 1},
+        {shortMedian: false, rows: 2},
+        {shortMedian: true, rows: 2},
+    ];
+    const fits = option => groups.every(group => {
+        const lines = distanceLabelLines(group, option.shortMedian);
+        return lines.every(line => chartTextWidth(chart.s, line) <= slot * option.rows - gap);
+    });
+    return options.find(fits) || options[3];
+}
+
+// Draw the dots of one distance group, faded except for the outer exceptions labelled below.
+// A score below the axis sits on the axis line.
+function drawDistanceDots(chart, frame, group, centreX, dotBoxes, outerDots, fade) {
+    group.values.forEach((feature, pointIndex) => {
+        const properties = feature.properties;
+        const x = centreX + ((pointIndex % 9) - 4) * 5;
+        const y = scale(Math.max(properties.score, 70), 70, 130, frame.bottom, frame.top);
+        const dot = svg('circle', {
+            cx: x, cy: y, r: 3.5, fill: fade, class: 'dot'
+        });
+        mark(chart, dot, properties.id, '<b>' + properties.name + '</b><br>Score ' +
+            formatScore(properties.score) + ', rank ' + properties.rank);
+        dotBoxes.push({x: x - 4, y: y - 4, width: 8, height: 8});
+        if (properties.distance_km > 10) {
+            outerDots.push({
+                x, y, name: properties.name, score: properties.score,
+                element: dot, rankClass: properties.rank_class,
+            });
+        }
+    });
+}
+
+// Return whether a text box lies inside the plot and clear of the given boxes.
+function fitsPlot(box, frame, others) {
+    const inside = box.x >= frame.left && box.x + box.width <= frame.right &&
+        box.y >= frame.top && box.y + box.height <= frame.bottom;
+    return inside && !others.some(other => boxesOverlap(box, other));
+}
+
+// Label the line at 100 in the first place where the label touches neither a dot nor other text.
+function placeAverageLabel(chart, frame, lineY, dotBoxes) {
+    const text = 'Greater Sydney average (100)';
+    const others = [...dotBoxes, ...[...chart.s.querySelectorAll('text')].map(label => label.getBBox())];
+    const lineOptions = [[text], wrapChartText(chart.s, text, 110), wrapChartText(chart.s, text, 56)];
+    const sides = [['start', frame.left + 4], ['end', frame.right - 4]];
+    const heights = ['below', 'above'];
+    for (const lines of lineOptions) {
+        for (const [anchor, x] of sides) {
+            for (const height of heights) {
+                const baseline = height === 'below'
+                    ? lineY + chartLineHeight
+                    : lineY - 6 - chartLineHeight * (lines.length - 1);
+                const label = addChartLines(chart.s, x, baseline, lines, anchor, 'tick halo');
+                if (fitsPlot(label.getBBox(), frame, others)) {
+                    return label;
+                }
+                label.remove();
+            }
+        }
+    }
+    return addChartLines(chart.s, frame.left + 4, lineY + chartLineHeight, [text], 'start', 'tick halo');
+}
+
+// Draw score distributions within five distance groups.
+function drawDistance() {
+    const chart = setupChart('distance-chart', 'Scores by five distance groups.');
+    const titles = titlesOf('distance-chart');
+    const fade = mapFade();
+    const scoreTicks = [70, 85, 100, 115, 130];
+    const widest = Math.max(...scoreTicks.map(value => chartTextWidth(chart.s, String(value))));
+    const left = Math.ceil(widest) + 14;
+    const right = chart.width - 8;
+    const slot = (right - left) / 5;
+    const groups = distanceGroups();
+    const labelLayout = chooseDistanceLabels(chart, groups, slot);
+    const frame = chartFrame(chart, {xTitle: titles.x, yTitle: titles.y}, {
+        left,
+        right,
+        plotHeight: plotHeightFor(chart),
+        xLabelLines: 3 * labelLayout.rows,
+    });
+    const scoreY = value => scale(value, 70, 130, frame.bottom, frame.top);
+    scoreTicks.forEach(value => drawYTick(chart, frame, scoreY(value), String(value)));
+    drawAxisLines(chart, frame);
+    chart.s.append(svg('line', {
+        x1: frame.left, x2: frame.right, y1: scoreY(100), y2: scoreY(100), class: 'ref'
+    }));
+    const dotBoxes = [];
+    const outerDots = [];
+    groups.forEach((group, index) => {
+        const centreX = left + slot * (index + 0.5);
+        drawDistanceDots(chart, frame, group, centreX, dotBoxes, outerDots, fade);
+        chart.s.append(svg('line', {
+            x1: centreX - 16, x2: centreX + 16, y1: scoreY(group.median), y2: scoreY(group.median), class: 'ref'
+        }));
+        const labelTop = frame.bottom + chartTickOffset + (index % labelLayout.rows) * 3 * chartLineHeight;
+        const lines = distanceLabelLines(group, labelLayout.shortMedian);
+        // A label at either end of the chart shifts inward rather than running off the chart.
+        const halfWidth = Math.max(...lines.map(line => chartTextWidth(chart.s, line))) / 2;
+        const labelX = Math.min(Math.max(centreX, halfWidth + 2), chart.width - halfWidth - 2);
+        addChartLines(chart.s, labelX, labelTop, lines, 'middle', 'tick tick-x');
+    });
+    placeAverageLabel(chart, frame, scoreY(100), dotBoxes);
+    const occupied = [...chart.s.querySelectorAll('text')].map(label => label.getBBox());
+    const candidates = outerDots.sort((first, second) => second.score - first.score).slice(0, 3);
+    const labelled = placeLabels(chart, frame, candidates, occupied);
+    labelled.forEach(dot => {
+        dot.element.setAttribute('fill', ramp[dot.rankClass]);
+        dot.element.dataset.labelled = 'true';
+    });
+    showBelowAxisNote(scored.filter(feature => feature.properties.score < 70).length);
+}
+
+// Say how many SA2s score below the 70 axis and are drawn on the bottom axis line. Say nothing if none do.
+function showBelowAxisNote(count) {
+    const note = document.querySelector('#distance-axis-note');
+    note.hidden = count === 0;
+    if (count === 1) {
+        note.textContent = '1 SA2 below 70 is drawn on the bottom axis line; hover the dot for its true score.';
+    } else {
+        note.textContent = count + ' SA2s below 70 are drawn on the bottom axis line; hover a dot for its true score.';
+    }
+}
+
+// Draw a two-point score histogram with axes and a clear 90 to 110 bracket.
+function drawHistogram() {
+    const chart = setupChart('histogram-chart', 'Counts of SA2s in two-point score bins.');
+    const titles = titlesOf('histogram-chart');
+    const bins = [];
+    for (let start = 70; start < 130; start += 2) {
+        bins.push( {
+            start, items: scored.filter(feature => feature.properties.score >= start &&
+            feature.properties.score < start + 2)
+        });
+    }
+    const maximum = Math.max(...bins.map(bin => bin.items.length));
+    const axisMaximum = Math.ceil(maximum / 10) * 10;
+    const frame = drawNumericAxes(chart, [70, 130], [0, axisMaximum], {
+        xTitle: titles.x,
+        yTitle: titles.y,
+        xStep: 10,
+        yStep: axisMaximum % 15 === 0 ? 15 : 10,
+        extraTop: 48,
+    });
+    const heightFor = value => value / axisMaximum * (frame.bottom - frame.top);
+    bins.forEach((bin, index) => {
+        const x = frame.left + index * (frame.right - frame.left) / bins.length + 1;
+        const width = (frame.right - frame.left) / bins.length - 2;
+        const height = heightFor(bin.items.length);
+        const middleScore = bin.start + 1;
+        const higher = scored.filter(feature => feature.properties.score > middleScore).length + 1;
+        const bar = svg('rect', {
+            x, y: frame.bottom - height, width, height, fill: ramp[rankClass(higher, scored.length)],
+                class: 'chart-bar'
+        });
+        mark(chart, bar, '', bin.start + ' to ' + (bin.start + 2) + ': ' + bin.items.length + ' SA2s' +
+            (bin.items.length <= 4 ? '<br>' +
+                bin.items.map(feature => feature.properties.name).join(', ') : ''));
+    });
+    const orderedScores = [...scored].sort((first, second) => first.properties.score - second.properties.score);
+    const median = orderedScores[Math.floor(orderedScores.length / 2)].properties.score;
+    const medianX = scale(median, 70, 130, frame.left, frame.right);
+    chart.s.append(svg('line', {
+        x1: medianX, x2: medianX, y1: frame.top, y2: frame.bottom, class: 'ref'
+    }));
+    addChartText(chart.s, medianX, frame.top - 10, 'median ' + formatScore(median), 'middle');
+    const bracketStart = scale(90, 70, 130, frame.left, frame.right);
+    const bracketEnd = scale(110, 70, 130, frame.left, frame.right);
+    chart.s.append(svg('path', {
+        d: 'M' + bracketStart + ' ' + (frame.top - 30) + 'v8H' + bracketEnd + 'v-8', class: 'ref', fill: 'none'
+    }));
+    addChartText(chart.s, (bracketStart + bracketEnd) / 2, frame.top - 40,
+        Math.round(data.score_middle_share * 100) + '% of SA2s', 'middle');
+}
+
+// Round a data range out to a useful ten-point score axis.
+function paddedScoreRange(values) {
+    const lower = Math.floor((Math.min(...values) - 4) / 10) * 10;
+    const upper = Math.ceil((Math.max(...values) + 4) / 10) * 10;
+    return [lower, upper];
+}
+
+// Draw a titled score-scale scatterplot with data-driven axes. Every dot fades to the shared colour
+// except the four SA2s already used as the panel-4 example place cards, which keep their true
+// quintile colour and get a name label (reusing placeLabels), tying the chart back to the cards.
+function drawScatter(id, xKey, yKey, summary, caption) {
+    const chart = setupChart(id, summary);
+    const titles = titlesOf(id);
+    const fade = mapFade();
+    const values = scored.filter(feature => feature.properties[xKey] !== null &&
+        feature.properties[yKey] !== null);
+    const xRange = paddedScoreRange(values.map(feature => feature.properties[xKey]));
+    const yRange = id === 'density-diversity-chart'
+        ? [60, 130]
+        : paddedScoreRange(values.map(feature => feature.properties[yKey]));
+    const chartTitles = {
+        'intensity-design-chart': 'Intensity against Design',
+        'density-diversity-chart': 'Density against Diversity',
+    };
+    const frame = drawNumericAxes(chart, xRange, yRange, {
+        chartTitle: chartTitles[id],
+        xTitle: titles.x,
+        yTitle: titles.y,
+    });
+    // A crosshair at 100 (the Greater Sydney average on each pillar's own scale) splits the chart the
+    // same way the map's Place types layer does; density-diversity-chart's two axes are exactly how
+    // that split is defined, so only that chart gets the crosshair and the four real place-type names
+    // in its corners. intensity-design-chart shows a positive correlation, not a four-way split, so it
+    // gets neither: an unlabelled crosshair there would not carry a finding.
+    if (id === 'density-diversity-chart') {
+        const crosshairX = scale(100, xRange[0], xRange[1], frame.left, frame.right);
+        const crosshairY = scale(100, yRange[0], yRange[1], frame.bottom, frame.top);
+        chart.s.append(svg('line', {
+            x1: crosshairX, x2: crosshairX, y1: frame.top, y2: frame.bottom, class: 'quadrant',
+        }));
+        chart.s.append(svg('line', {
+            x1: frame.left, x2: frame.right, y1: crosshairY, y2: crosshairY, class: 'quadrant',
+        }));
+        // Each corner's own text-safe place colour (see the builder's COLOR_ROLES comment), not the
+        // plain "tick halo" ink every other chart label uses, so the words read as that place type's
+        // own colour, the same colour the map's Place types layer fills that type with.
+        const corners = [
+            {x: frame.right - 6, y: frame.top + 14, anchor: 'end', bottom: false,
+                label: 'dense and diverse', place: 'dense-diverse'},
+            {x: frame.left + 6, y: frame.top + 14, anchor: 'start', bottom: false,
+                label: 'less dense and diverse', place: 'less-dense-diverse'},
+            {x: frame.left + 6, y: frame.bottom - 8, anchor: 'start', bottom: true,
+                label: 'less dense and less diverse', place: 'less-dense-less-diverse'},
+            {x: frame.right - 6, y: frame.bottom - 8, anchor: 'end', bottom: true,
+                label: 'dense and less diverse', place: 'dense-less-diverse'},
+        ];
+        corners.forEach(corner => {
+            const lines = wrapChartText(chart.s, corner.label, 100);
+            const baseline = corner.bottom ? corner.y - chartLineHeight * (lines.length - 1) : corner.y;
+            const className = 'tick halo place-' + corner.place + '-text';
+            addChartLines(chart.s, corner.x, baseline, lines, corner.anchor, className);
+        });
+    }
+    const examples = [];
+    values.forEach(feature => {
+        const properties = feature.properties;
+        if (properties[yKey] < yRange[0] || properties[yKey] > yRange[1]) return;
+        const isExample = data.card_names.includes(properties.name);
+        const x = scale(properties[xKey], xRange[0], xRange[1], frame.left, frame.right);
+        const y = scale(properties[yKey], yRange[0], yRange[1], frame.bottom, frame.top);
+        const dot = svg('circle', {
+            cx: x, cy: y, r: 3.5, fill: isExample ? ramp[properties.rank_class] : fade, class: 'dot',
+        });
+        mark(chart, dot, properties.id, '<b>' + properties.name + '</b><br>' +
+            xKey.replace('_', ' ') + ' ' + formatScore(properties[xKey]) + '<br>' +
+            yKey.replace('_', ' ') + ' ' + formatScore(properties[yKey]));
+        if (isExample) {
+            dot.dataset.labelled = 'true';
+            examples.push({x, y, name: properties.name});
+        }
+    });
+    const occupied = [...chart.s.querySelectorAll('text')].map(label => label.getBBox());
+    placeLabels(chart, frame, examples, occupied);
+    document.querySelector('#' + id + '-caption').textContent = caption;
+    if (id === 'density-diversity-chart') {
+        const below = values.filter(feature => feature.properties.diversity < yRange[0]);
+        const names = below.map(feature => feature.properties.name).join(', ');
+        const noun = below.length === 1 ? 'SA2 is' : 'SA2s are';
+        const scoreText = below.length === 1 ? 'with a Diversity score of ' +
+            formatScore(below[0].properties.diversity) : 'with Diversity scores below 60';
+        document.querySelector('#density-diversity-axis-note').textContent = below.length + ' ' + noun +
+            ' below the axis: ' + names + ', ' + scoreText + '.';
+    }
+}
+
+// Draw the paired bars and value labels of the equity chart.
+function drawEquityBars(chart, frame, axis, pitch) {
+    const rows = data.equity;
+    const slot = (frame.right - frame.left) / rows.length;
+    const series = [
+        ['top_quintile_share', 'Top quintile', ramp[4]],
+        ['bottom_quintile_share', 'Bottom quintile', chartSecondary()],
+    ];
+    rows.forEach((row, i) => {
+        series.forEach(([key, label, colour], j) => {
+            const value = row[key] * 100;
+            const barHeight = value / axis.top * (frame.bottom - frame.top);
+            const centreX = frame.left + slot * (i + 0.5) + (j - 0.5) * pitch;
+            const bar = svg('rect', {
+                x: centreX - (pitch - 4) / 2,
+                y: frame.bottom - barHeight,
+                width: pitch - 4,
+                height: barHeight,
+                fill: colour,
+                class: 'chart-bar',
+            });
+            mark(chart, bar, '', label + ' ' + row.income_group + ': ' + value.toFixed(1) + '%<br>' +
+                formatWhole(row.residents) + ' residents in ' + row.sa2s + ' SA2s');
+            addChartText(chart.s, centreX, frame.bottom - barHeight - 5, value.toFixed(1) + '%', 'middle');
+        });
+    });
+}
+
+// Draw paired resident shares for each income group.
+function drawEquity() {
+    const chart = setupChart('equity-chart', 'Top-quintile and bottom-quintile resident shares by income group.');
+    const titles = titlesOf('equity-chart');
+    const rows = data.equity;
+    const shares = rows.flatMap(row => [row.top_quintile_share * 100, row.bottom_quintile_share * 100]);
+    const axis = valueAxis(Math.max(...shares), 5);
+    const yTicks = roundedTicks(0, axis.top, axis.step);
+    const widest = Math.max(...yTicks.map(value => chartTextWidth(chart.s, value + '%')));
+    const left = Math.ceil(widest) + 14;
+    const right = chart.width - 10;
+    const slot = (right - left) / rows.length;
+    const groupLines = rows.map(row => wrapChartText(chart.s, row.income_group.replace(' areas', ''), slot - 6));
+    const frame = chartFrame(chart, {xTitle: titles.x, yTitle: titles.y}, {
+        left,
+        right,
+        plotHeight: plotHeightFor(chart),
+        xLabelLines: Math.max(...groupLines.map(lines => lines.length)),
+    });
+    yTicks.forEach(value => {
+        drawYTick(chart, frame, scale(value, 0, axis.top, frame.bottom, frame.top), value + '%');
+    });
+    groupLines.forEach((lines, i) => {
+        addChartLines(chart.s, left + slot * (i + 0.5), frame.bottom + chartTickOffset, lines, 'middle', 'tick tick-x');
+    });
+    drawAxisLines(chart, frame);
+    const valueWidth = Math.max(...shares.map(value => chartTextWidth(chart.s, value.toFixed(1) + '%')));
+    const roomyPitch = Math.max(valueWidth + 6, Math.min(64, slot * 0.3));
+    drawEquityBars(chart, frame, axis, Math.min(roomyPitch, (slot - 6) / 2));
+}
+
+// Draw median movement and the largest movement in each baseline rank quintile.
+// Return a hex colour blended toward white by the given amount (0 none, 1 white), for the
+// stability chart's lighter "swings to" segment: a tint of the bar's own quintile colour.
+function tint(hexColour, amount) {
+    const value = parseInt(hexColour.slice(1), 16);
+    const channels = [value >> 16 & 255, value >> 8 & 255, value & 255];
+    const blended = channels.map(channel => Math.round(channel + (255 - channel) * amount));
+    return '#' + blended.map(channel => channel.toString(16).padStart(2, '0')).join('');
+}
+
+function drawStability() {
+    const chart = setupChart('stability-chart', 'Median and maximum rank movement in five baseline rank quintiles.');
+    const titles = titlesOf('stability-chart');
+    const rows = data.rank_bands;
+    const longestRange = Math.max(...rows.map(row => row.maximum));
+    const axis = valueAxis(longestRange, 6);
+    const bandLines = rows.map(row => wrapChartText(chart.s, row.label, chart.width * 0.3));
+    const widestBand = Math.max(...bandLines.flat().map(line => chartTextWidth(chart.s, line)));
+    const left = Math.ceil(widestBand) + 14;
+    const right = chart.width - 16;
+    const rowHeight = chart.width > 700 ? 72 : 108;
+    const frame = chartFrame(chart, {xTitle: titles.x, yTitle: titles.y}, {
+        left,
+        right,
+        plotHeight: rows.length * rowHeight,
+        xLabelLines: 1,
+    });
+    roundedTicks(0, axis.top, axis.step).forEach(value => {
+        drawXTick(chart, frame, scale(value, 0, axis.top, frame.left, frame.right), String(value));
+    });
+    drawAxisLines(chart, frame);
+    rows.forEach((row, index) => {
+        const centreY = frame.top + rowHeight * (index + 0.5);
+        const lines = bandLines[index];
+        const labelTop = centreY + 4 - chartLineHeight * (lines.length - 1) / 2;
+        addChartLines(chart.s, left - 8, labelTop, lines, 'end', 'tick tick-y');
+        const medianWidth = row.median / axis.top * (frame.right - frame.left);
+        const maximumWidth = row.maximum / axis.top * (frame.right - frame.left);
+        // Rows run top to bottom quintile, in the same order as the map's ramp, darkest first.
+        const quintileColour = ramp[4 - index];
+        const extension = svg('rect', {
+            x: left + medianWidth,
+            y: centreY - rowHeight * 0.09,
+            width: Math.max(0, maximumWidth - medianWidth),
+            height: rowHeight * 0.18,
+            fill: tint(quintileColour, 0.5),
+            class: 'range-extension',
+            'data-median': row.median,
+            'data-maximum': row.maximum,
+            'data-mover-name': row.mover_name,
+        });
+        chart.s.append(extension);
+        const bar = svg('rect', {
+            x: left, y: centreY - rowHeight * 0.22, width: medianWidth, height: rowHeight * 0.44, fill: quintileColour,
+            class: 'chart-bar'
+        });
+        mark(chart, bar, '', row.label + ': median ' + row.median.toFixed(1) + ', mean ' +
+            row.mean.toFixed(1) + ', maximum ' + row.maximum.toFixed(1) + ' (' + row.mover_name +
+            ', ranks ' + row.mover_rank_min + ' to ' + row.mover_rank_max + ')');
+        const medianText = 'median ' + Math.round(row.median) + ' places';
+        const medianLabel = addChartText(
+            chart.s, left + medianWidth + 8, centreY - 8, medianText, 'start', 'tick halo median-label'
+        );
+        // This label sits over its own row's extension, a white tint of the bar colour so always
+        // pale regardless of theme; a fixed dark fill (not the theme's own --ink2) stays readable on it.
+        // The extension is a white tint of the bar colour, so always pale regardless of theme;
+        // its own true colour tells readableTextColour() which fixed fill reads well on it.
+        medianLabel.style.fill = readableTextColour(extension.getAttribute('fill'));
+        const maximumX = left + maximumWidth;
+        const moverLines = [row.mover_name, 'swings ' + row.mover_rank_min + ' to ' + row.mover_rank_max];
+        const moverWidth = Math.max(...moverLines.map(line => chartTextWidth(chart.s, line)));
+        const moverX = Math.max(frame.left + moverWidth / 2, Math.min(maximumX, frame.right - moverWidth / 2));
+        const moverLabel = addChartLines(chart.s, moverX, centreY + 22, moverLines, 'middle', 'tick halo mover-label');
+        // On a narrow chart the clamp above can pull this label onto the bar or the extension;
+        // when that happens, switch to whichever fixed fill reads well on the shape it now covers.
+        const moverBox = moverLabel.getBBox();
+        if (boxesOverlap(moverBox, bar.getBBox())) {
+            moverLabel.style.fill = readableTextColour(bar.getAttribute('fill'));
+        } else if (boxesOverlap(moverBox, extension.getBBox())) {
+            moverLabel.style.fill = readableTextColour(extension.getAttribute('fill'));
+        }
+    });
+}
+
+// The Moran scatterplot starts its score axis here; an SA2 scoring below it is left of the axis and named in a note.
+const moranAxisMinimum = 60;
+
+// Say which SA2s are left of the axis of the Moran scatterplot, with their scores. Say nothing if there are none.
+function showMoranAxisNote(leftOfAxis) {
+    const note = document.querySelector('#moran-axis-note');
+    note.hidden = leftOfAxis.length === 0;
+    if (leftOfAxis.length === 0) {
+        return;
+    }
+    const ordered = [...leftOfAxis].sort((first, second) => first.score - second.score);
+    const named = ordered.map(item => item.name + ' (score ' + formatScore(item.score) + ')').join(', ');
+    const subject = ordered.length === 1 ? '1 SA2 is' : ordered.length + ' SA2s are';
+    note.textContent = subject + ' left of the axis: ' + named + '.';
+}
+
+// Put the slope label of the Moran line beside the line, where it touches no other text and covers the fewest dots.
+function placeSlopeLabel(chart, frame, lineY, label, dotBoxes) {
+    const others = [...chart.s.querySelectorAll('text')].map(item => item.getBBox());
+    let best = null;
+    for (let fraction = 0.95; fraction >= 0.3; fraction -= 0.05) {
+        for (const offset of [-8, 18]) {
+            const x = frame.left + (frame.right - frame.left) * fraction;
+            const text = addChartText(chart.s, x, lineY(x) + offset, label, 'end', 'tick halo');
+            const box = text.getBBox();
+            text.remove();
+            const covered = dotBoxes.filter(dotBox => boxesOverlap(box, dotBox)).length;
+            if (fitsPlot(box, frame, others) && (best === null || covered < best.covered)) {
+                best = {x, y: lineY(x) + offset, covered};
+            }
+        }
+    }
+    const chosen = best || {x: frame.right - 4, y: lineY(frame.right) - 8};
+    return addChartText(chart.s, chosen.x, chosen.y, label, 'end', 'tick halo');
+}
+
+// Draw the Moran scatterplot: each SA2's score against the average score of its neighbours.
+function drawMoran() {
+    const points = scored.filter(feature => feature.properties.neighbour_average_score !== null);
+    const plotted = points.filter(feature => feature.properties.score >= moranAxisMinimum);
+    const moranI = data.global_i;
+    const chart = setupChart('moran-chart', "Each SA2's score against the average score of its neighbours; " +
+        "the points follow a line with slope " + moranI.toFixed(2) + ", which is Moran's I.");
+    const titles = titlesOf('moran-chart');
+    const xRange = [moranAxisMinimum, paddedScoreRange(points.map(feature => feature.properties.score))[1]];
+    const yRange = paddedScoreRange(plotted.map(feature => feature.properties.neighbour_average_score));
+    const frame = drawNumericAxes(chart, xRange, yRange, {
+        xTitle: titles.x,
+        yTitle: titles.y,
+        xStep: 10,
+        yStep: 10,
+        plotHeight: Math.round(Math.min(340, Math.max(230, chart.width * 0.6))),
+    });
+    const xAt = value => scale(value, xRange[0], xRange[1], frame.left, frame.right);
+    const yAt = value => scale(value, yRange[0], yRange[1], frame.bottom, frame.top);
+    chart.s.append(svg('line', {x1: xAt(100), x2: xAt(100), y1: frame.top, y2: frame.bottom, class: 'quadrant'}));
+    chart.s.append(svg('line', {x1: frame.left, x2: frame.right, y1: yAt(100), y2: yAt(100), class: 'quadrant'}));
+    const lineValue = value => 100 + moranI * (value - 100);
+    chart.s.append(svg('line', {
+        x1: xAt(xRange[0]), x2: xAt(xRange[1]),
+        y1: yAt(lineValue(xRange[0])), y2: yAt(lineValue(xRange[1])),
+        class: 'ref'
+    }));
+    const order = [...data.hotspot_order].reverse();
+    const dotBoxes = [];
+    const drawOrder = [...plotted].sort((first, second) => {
+        return order.indexOf(first.properties.hotspot) - order.indexOf(second.properties.hotspot);
+    });
+    drawOrder.forEach(feature => {
+        const properties = feature.properties;
+        const pale = properties.hotspot === 'not significant' ? ' pale' : '';
+        const dot = svg('circle', {
+            cx: xAt(properties.score), cy: yAt(properties.neighbour_average_score), r: 3.5,
+            fill: hotspotColours[properties.hotspot], class: 'dot' + pale,
+        });
+        dotBoxes.push({
+            x: xAt(properties.score) - 4, y: yAt(properties.neighbour_average_score) - 4, width: 8, height: 8
+        });
+        mark(chart, dot, properties.id, '<b>' + properties.name + '</b><br>Score ' + formatScore(properties.score) +
+            ", neighbours' average " + formatScore(properties.neighbour_average_score) + '<br>' +
+            hotspotName(properties.hotspot));
+    });
+    addChartText(chart.s, frame.right - 6, frame.top + 14, 'High-high', 'end', 'tick halo');
+    addChartText(chart.s, frame.left + 6, frame.top + 14, 'Low-high', 'start', 'tick halo');
+    addChartText(chart.s, frame.left + 6, frame.bottom - 8, 'Low-low', 'start', 'tick halo');
+    addChartText(chart.s, frame.right - 6, frame.bottom - 8, 'High-low', 'end', 'tick halo');
+    const lineYAtPixel = pixelX => yAt(lineValue(scale(pixelX, frame.left, frame.right, xRange[0], xRange[1])));
+    placeSlopeLabel(chart, frame, lineYAtPixel, 'slope ' + moranI.toFixed(2) + " (Moran's I)", dotBoxes);
+    showMoranAxisNote(points.filter(feature => feature.properties.score < moranAxisMinimum).map(feature => ({
+        name: feature.properties.name, score: feature.properties.score,
+    })));
+}
+
+// Return true when two SVG bounding boxes overlap.
+function boxesOverlap(first, second) {
+    return first.x < second.x + second.width &&
+        first.x + first.width > second.x &&
+        first.y < second.y + second.height &&
+        first.y + first.height > second.y;
+}
+
+// Try to place a label of one or more lines beside a dot. Return whether it was placed.
+function tryLabel(chart, frame, dot, lines, placed) {
+    const bounds = {
+        x: frame.left, y: frame.top, width: chart.width - frame.left, height: frame.bottom - frame.top
+    };
+    const candidates = [
+        [8, -6, 'start'],
+        [8, 10, 'start'],
+        [8, -18, 'start'],
+        [8, 22, 'start'],
+        [-8, -6, 'end'],
+        [-8, 10, 'end'],
+        [-8, -18, 'end'],
+        [-8, 22, 'end'],
+        [8, -30, 'start'],
+        [-8, -30, 'end'],
+    ];
+    for (const [offsetX, offsetY, anchor] of candidates) {
+        const label = addChartLines(chart.s, dot.x + offsetX, dot.y + offsetY, lines, anchor, 'tick halo');
+        const box = label.getBBox();
+        const inside = box.x >= bounds.x &&
+            box.y >= bounds.y &&
+            box.x + box.width <= chart.width &&
+            box.y + box.height <= bounds.y + bounds.height;
+        const overlaps = placed.some(item => boxesOverlap(box, item));
+        if (inside && !overlaps) {
+            placed.push(box);
+            return true;
+        }
+        label.remove();
+    }
+    return false;
+}
+
+// Place labels beside dots, avoiding chart text and other labels. A long name may take two lines.
+// Returns the dots whose label was actually placed.
+function placeLabels(chart, frame, dots, occupied = []) {
+    const placed = [...occupied];
+    const labelled = [];
+    dots.forEach(dot => {
+        const twoLines = wrapChartText(chart.s, dot.name, 120);
+        const fits = tryLabel(chart, frame, dot, [dot.name], placed) ||
+            (twoLines.length > 1 && tryLabel(chart, frame, dot, twoLines, placed));
+        if (fits) {
+            labelled.push(dot);
+        }
+    });
+    return labelled;
+}
+
+// Draw one titled foot-traffic scatterplot with a zoomed score axis.
+// Draw one walking-count scatter, faded except the top three by count, which keep their true
+// quintile colour and a name label (reusing placeLabels), the same pattern as the distance chart.
+function drawFoot(day) {
+    const chart = setupChart(day + '-chart', day + ' average walking counts and score.');
+    const titles = titlesOf(day + '-chart');
+    const fade = mapFade();
+    const items = data.foot_sites.filter(item => numberValue(item[day + '_average']) !== null);
+    const scores = items.map(item => byCode.get(String(item.sa2_code)).properties.score);
+    const xRange = paddedScoreRange(scores);
+    const maximum = Math.ceil(Math.max(...items.map(item => item[day + '_average'])) / 10000) * 10000;
+    const frame = drawNumericAxes(chart, xRange, [0, maximum], {
+        chartTitle: day === 'weekday' ? 'Weekday walking counts' : 'Weekend walking counts',
+        chartNote: 'n = ' + items.length + ' SA2s',
+        xTitle: titles.x,
+        yTitle: titles.y,
+        xStep: 10,
+        yStep: 10000,
+    });
+    const candidates = [];
+    items.forEach(item => {
+        const feature = byCode.get(String(item.sa2_code));
+        const properties = feature.properties;
+        const x = scale(properties.score, xRange[0], xRange[1], frame.left, frame.right);
+        const y = scale(item[day + '_average'], 0, maximum, frame.bottom, frame.top);
+        const dot = svg('circle', {
+            cx: x, cy: y, r: 4, fill: fade, class: 'dot'
+        });
+        mark(chart, dot, properties.id, '<b>' + properties.name + '</b><br>' +
+            formatWhole(item[day + '_average']) + ' ' + day + ' count<br>Score ' +
+                formatScore(properties.score) + ', rank ' + properties.rank);
+        candidates.push({
+            x, y, name: properties.name, count: item[day + '_average'],
+            element: dot, rankClass: properties.rank_class,
+        });
+    });
+    const occupied = [...chart.s.querySelectorAll('text')].map(label => label.getBBox());
+    const topDots = candidates.sort((first, second) => second.count - first.count).slice(0, 3);
+    const labelled = placeLabels(chart, frame, topDots, occupied);
+    labelled.forEach(dot => {
+        dot.element.setAttribute('fill', ramp[dot.rankClass]);
+        dot.element.dataset.labelled = 'true';
+    });
+}
+// Draw the Intensity against Design scatter (its own function so the quintile-focus redraw
+// below can call it by name, the same way drawCharts does).
+function drawIntensityDesignChart() {
+    drawScatter('intensity-design-chart', 'intensity', 'design', 'Intensity and Design scores by SA2.',
+        'Spearman correlation: ' + data.correlations.intensity_design.toFixed(2) + '.');
+}
+
+// Draw the Density against Diversity scatter, the density-diversity-chart counterpart above.
+function drawDensityDiversityChart() {
+    drawScatter('density-diversity-chart', 'density', 'diversity', 'Density and Diversity scores by SA2.',
+        'Spearman correlation: ' + data.correlations.density_diversity.toFixed(2) + '.');
+}
+
+// The five charts where a quintile can be focused, independently, each replacing that one
+// chart's usual named-highlight default while focused. Mapped to the function that redraws it.
+const quintileFocusDraw = {
+    'distance-chart': drawDistance,
+    'intensity-design-chart': drawIntensityDesignChart,
+    'density-diversity-chart': drawDensityDiversityChart,
+    'weekday-chart': () => drawFoot('weekday'),
+    'weekend-chart': () => drawFoot('weekend'),
+};
+const quintileFocusLabels = [
+    'Bottom quintile', 'Fourth quintile', 'Middle quintile', 'Second quintile', 'Top quintile',
+];
+const quintileFocus = {};
+Object.keys(quintileFocusDraw).forEach(chartId => { quintileFocus[chartId] = null; });
+
+// Recolour one quintile-focus chart's own dots to its own focus (true colour for the focused
+// quintile, mapFade() for the rest), or leave the redraw's usual named-highlight colours
+// untouched when that chart has no quintile focused.
+function applyQuintileFocus(chartId) {
+    const focus = quintileFocus[chartId];
+    if (focus === null) {
+        return;
+    }
+    const fade = mapFade();
+    document.querySelectorAll('#' + chartId + ' circle.dot[data-code]').forEach(dot => {
+        const properties = byCode.get(dot.dataset.code).properties;
+        dot.setAttribute('fill', properties.rank_class === focus ? ramp[focus] : fade);
+    });
+}
+
+// Redraw one quintile-focus chart from scratch, then reapply its own focus, if any: a redraw
+// with no focus set reproduces the chart's plain named-highlight rendering exactly.
+function renderQuintileFocusChart(chartId) {
+    quintileFocusDraw[chartId]();
+    applyQuintileFocus(chartId);
+}
+
+// Update one chart's own quintile buttons and state line to match its own focus.
+function updateQuintileFocusUi(chartId) {
+    const focus = quintileFocus[chartId];
+    document.querySelectorAll('.quintile-focus-button[data-chart="' + chartId + '"]').forEach(button => {
+        button.setAttribute('aria-pressed', String(Number(button.dataset.quintile) === focus));
+    });
+    document.querySelector('.quintile-focus-clear[data-chart="' + chartId + '"]')
+        .setAttribute('aria-pressed', String(focus === null));
+    document.querySelector('#' + chartId + '-focus-state').textContent =
+        'Showing: ' + (focus === null ? 'baseline' : quintileFocusLabels[focus]);
+}
+
+// Set one chart's quintile focus without affecting any other chart's focus. Passing the
+// chart's own current focus, or null (the "Show all" button), clears it.
+function setQuintileFocus(chartId, quintile) {
+    quintileFocus[chartId] = quintileFocus[chartId] === quintile ? null : quintile;
+    renderQuintileFocusChart(chartId);
+    updateQuintileFocusUi(chartId);
+}
+
+document.querySelectorAll('.quintile-focus-button').forEach(button => {
+    button.onclick = () => setQuintileFocus(button.dataset.chart, Number(button.dataset.quintile));
+});
+document.querySelectorAll('.quintile-focus-clear').forEach(button => {
+    button.onclick = () => setQuintileFocus(button.dataset.chart, null);
+});
+
+function drawCharts() {
+    renderQuintileFocusChart('distance-chart');
+    drawHistogram();
+    renderQuintileFocusChart('intensity-design-chart');
+    renderQuintileFocusChart('density-diversity-chart');
+    drawEquity();
+    drawStability();
+    drawMoran();
+    renderQuintileFocusChart('weekday-chart');
+    renderQuintileFocusChart('weekend-chart');
+}
+// Return the rendered Leaflet path options for one SA2.
+function mapStyle(code) {
+    let value = null;
+    layer.eachLayer(item => {
+        if (String(item.feature.properties.id) === String(code)) {
+            value = {
+                fillColor: item.options.fillColor,
+                fillOpacity: item.options.fillOpacity,
+                color: item.options.color,
+                weight: item.options.weight,
+                dashArray: item.options.dashArray,
+            };
+        }
+    });
+    return value;
+}
+
+function mapFill(code) {
+    return mapStyle(code)?.fillColor || '';
+}
+// Return the tooltip the map holds for one SA2 as a list of plain-text lines.
+function tooltipLines(code) {
+    let lines = [];
+    layer.eachLayer(item => {
+        if (String(item.feature.properties.id) === String(code)) {
+            const box = document.createElement('div');
+            box.innerHTML = item.getTooltip().getContent().replaceAll('<br>', '\n');
+            lines = box.textContent.split('\n');
+        }
+    });
+    return lines;
+}
+function outlineWeight(code) {
+    return mapStyle(code)?.weight || 0;
+}
+renderLegend();
+renderRows();
+drawCharts();
+window.vibrancy= {
+    select, highlight, setLayer, search, sortTable, csv, mapFill, mapStyle, outlineWeight, tooltipLines,
+        calculateWeights, setWeights, weightedRanking, fifthChangeSentence, setBaseline, variantRanks,
+            toggleCategoryFocus, clearCategoryFocus,
+            focusState:() => ({
+                placeType: focusedPlaceType,
+                hotspot: focusedHotspot,
+                quintile: focusedQuintile,
+            }),
+            shownRank:code=>shownRank(byCode.get(String(code)).properties),
+            shownClass:code=>shownClass(byCode.get(String(code)).properties),
+            setQuintileFocus, chartQuintileFocus:() => ({...quintileFocus}),
+            state:()=>( {
+        mode,variant,custom
+    }),chartCounts:()=>( {
+        beeswarm:document.querySelectorAll('#distance-chart circle.mark').length,
+            histogram:document.querySelectorAll('#histogram-chart rect.mark').length,
+                intensityDesign:document.querySelectorAll('#intensity-design-chart circle.mark').length,
+                    densityDiversity:document.querySelectorAll('#density-diversity-chart circle.mark').length,
+                        equity:document.querySelectorAll('#equity-chart rect.mark').length,
+                            stability:document.querySelectorAll('#stability-chart rect.mark').length,
+                                weekday:document.querySelectorAll('#weekday-chart circle.mark').length,
+                                    weekend:document.querySelectorAll('#weekend-chart circle.mark').length
+    }),setVariant:name=> {
+        picker.value=name;
+        picker.dispatchEvent(new Event('change'));
+        return name
+    }
+};
+</script></body>
+</html>
