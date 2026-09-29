@@ -9,3 +9,4 @@ output/
 __pycache__/
 raw/
 staging/
+.claude/
