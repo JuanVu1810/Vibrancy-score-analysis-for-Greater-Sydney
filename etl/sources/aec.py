@@ -59,6 +59,9 @@ def check(out: dict, ctx) -> list:
 
 
 SOURCES = [
-    Source("polling_places", "AEC federal election polling places", "not verified (AEC)",
+    # AEC's site licence is CC BY 4.0 except for "AEC's maps"; that exception is about map graphics,
+    # not this point-location CSV, but the download page itself states no licence.
+    Source("polling_places", "AEC federal election polling places",
+           "CC BY 4.0 (AEC's general licence; not stated on this download)",
            "Australian Electoral Commission", ("polling_places",), parse, check),
 ]

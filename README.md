@@ -16,17 +16,17 @@ built and tested too. The methodology book in `vibrancy/book/` is still being wr
 The numbers below come from the saved results and the built page. They are screening results for the conditions that
 allow street activity, not measurements of how busy places are.
 
-<img src="vibrancy/images/vibrancy_map.png" alt="Two maps of Greater Sydney SA2s coloured by fifth of the vibrancy ranking: the whole region on the left and the built-up area on the right. The darkest, most vibrant fifth is packed into the inner city, and the large outer SA2s are in the lowest fifth. Thin outlines mark clusters of similar scores." width="830">
+<img src="vibrancy/images/vibrancy_map.png" alt="Two maps of Greater Sydney SA2s coloured by quintile of the vibrancy ranking: the whole region on the left and the built-up area on the right. The darkest, most vibrant quintile is packed into the inner city, and the large outer SA2s are in the lowest quintile. Thin outlines mark clusters of similar scores." width="830">
 
-*Vibrancy score by rank fifth: the whole region (left) and the built-up area (right). Thin outlines mark clusters of similar
+*Vibrancy score by quintile: the whole region (left) and the built-up area (right). Thin outlines mark clusters of similar
 scores: solid for high-high hot spots and dashed for low-low cold spots. The two kinds of outlier have dotted and dash-dot
 outlines.*
 
 - **What was scored.** 372 of the 373 SA2s get a score. Centennial Park has no residents or registered businesses, so it
-  is left out. The most vibrant fifth of the scored SA2s (75 areas) covers 2.0% of the land that was scored but holds
+  is left out. The most vibrant quintile of the scored SA2s (75 areas) covers 2.0% of the land that was scored but holds
   22.4% of its residents.
 - **Who lives in the most vibrant places.** Residents of higher-income areas are about twice as likely to live in a
-  top-fifth SA2 as residents of lower-income areas (31.8% against 16.1%). The income groups are areas, not households, so
+  top-quintile SA2 as residents of lower-income areas (31.8% against 16.1%). The income groups are areas, not households, so
   this describes areas and not individual households.
 - **How sure we can be.** The top group is fairly stable: the top 25 SA2s keep 17 to 25 of the same SA2s across the 22
   alternative versions of the index (for example dropping one indicator, skipping the log transform or weighting every
@@ -58,7 +58,7 @@ has no background tiles by design, so it shows the SA2 shapes only.
 On the page you can:
 
 - switch the map between six layers: the overall score, the three pillars (Intensity, Diversity and Design), the four place
-  types and the hot spots. The legend shows the fifths, the place types or the clusters, with counts;
+  types and the hot spots. The legend shows the quintiles, the place types or the clusters, with counts;
 - zoom to Greater Sydney, the inner city, Parramatta or Liverpool, and show or hide the thin hot-spot outlines;
 - search for an SA2 by name and open its profile card: score, rank, how far its rank moves across the 22 alternative
   versions, the three pillar bars, everyday facts (residents, businesses, stops and street intersections), its hot-spot
