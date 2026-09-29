@@ -12,9 +12,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "output"
-SHAPEFILE = DATA_DIR / "SA2_2021_AUST_GDA2020.shp"
 TEMPLATE = Path(__file__).with_name("vibrancy_story_template.html")
 # The colour-roles table: the one place in the code where every named colour is defined, for both themes. Every
 # other colour name in this file (RAMP, PLACE_COLORS, HOTSPOT_COLORS, ...) and every colour in the template's CSS
@@ -298,8 +296,27 @@ def add_hotspot_columns(regions, tables_dir):
     return regions.merge(table, on="sa2_code", how="left")
 
 
-def load_regions(scores, shapefile=SHAPEFILE):
+def raw_shapefile():
+    """Return the SA2 boundary shapefile download_data.py already saved under raw/, from its manifest entry.
+
+    Not a module-level constant: reading the manifest is real file I/O, and most tests never need the
+    real shapefile (they pass their own small GeoDataFrame instead), so this only runs when a caller
+    actually wants the default.
+    """
+    manifest_path = ROOT / "raw" / "manifest.json"
+    assert manifest_path.exists(), f"{manifest_path} not found; run download_data.py first (see README)."
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    asgs_source = manifest["sources"].get("asgs_sa2")
+    assert asgs_source, "raw/manifest.json has no asgs_sa2 entry; run download_data.py to fetch the SA2 boundaries."
+    folder = ROOT / asgs_source["extra"]["unzipped_to"]["main"]
+    shapefiles = sorted(folder.glob("*.shp"))
+    assert len(shapefiles) == 1, f"Expected one shapefile in {folder}, found {len(shapefiles)}."
+    return shapefiles[0]
+
+
+def load_regions(scores, shapefile=None):
     """Join saved scores to Greater Sydney SA2 boundaries and add CBD distance."""
+    shapefile = raw_shapefile() if shapefile is None else shapefile
     score_rows = pd.read_csv(scores) if isinstance(scores, (str, Path)) else pd.DataFrame(scores).copy()
     score_rows["sa2_code"] = score_rows["sa2_code"].astype(int)
     bounds = gpd.read_file(shapefile, engine="pyogrio")
