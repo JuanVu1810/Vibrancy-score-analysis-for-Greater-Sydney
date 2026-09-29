@@ -11,5 +11,7 @@ WORKDIR /work
 COPY requirements.lock .
 RUN pip install --no-cache-dir --no-deps -r requirements.lock
 
-# The project itself is bind-mounted at /work by docker-compose.yml
-CMD ["bash", "scripts/run.sh"]
+# The project itself is bind-mounted at /work by docker-compose.yml. There is no single default
+# command: see README.md's "Run the analysis" section for the documented commands, each of which
+# passes its own --entrypoint.
+CMD ["bash", "-c", "echo 'No default command. See README.md, section \"Run the analysis\", for the documented commands.'; exit 1"]

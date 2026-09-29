@@ -19,7 +19,8 @@ services:
       timeout: 3s
       retries: 30
 
-  # Runs the notebook and checks the results:  docker compose run --rm runner
+  # Runs the analysis notebook and builds the story page: see README.md, section "Run the
+  # analysis", for the exact commands (each overrides --entrypoint for its own step).
   runner:
     build: .
     depends_on:
@@ -34,7 +35,6 @@ services:
     volumes:
       - .:/work
     working_dir: /work
-    command: ["bash", "scripts/run.sh"]
 
   # Cleans the files in raw/ (from download_data.py) and loads them into the "vibrancy" schema:  docker compose run --rm etl
   # Other commands:  docker compose run --rm --no-deps etl run --no-db   (files only, no database)
