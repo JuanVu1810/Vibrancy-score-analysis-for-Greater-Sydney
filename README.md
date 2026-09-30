@@ -161,7 +161,7 @@ jupyter-book build --html      # the site is written to vibrancy/book/_build/htm
 | `output/` | The generated results (git-ignored): the scores, the checks, the further analyses and the executed notebook |
 | `vibrancy/index.html`, `vibrancy/images/` | The data story page and its static figures |
 | `vibrancy/book/` | The methodology book (in progress); the rest of `vibrancy/` is the story page above |
-| `tests/` | Tests for the downloader, the unzipping, the parsers, the quality checks, the index functions, the structure of the notebook, the saved hot-spot table, the story page and its figures, and the code style of the page |
+| `tests/` | Tests for the downloader, the unzipping, the parsers, the quality checks, the index functions, the structure of the notebook, the saved hot-spot table, the story page and its figures |
 | `docker-compose.yml`, `Dockerfile` | The PostGIS database and the Python environment |
 | `requirements.txt`, `requirements.lock` | The direct dependencies, and a full pin of every package (the Docker image installs the lock file) |
 | `.env.example` | Template for the private `.env` |
