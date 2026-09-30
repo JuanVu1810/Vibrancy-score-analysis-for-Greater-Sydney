@@ -136,13 +136,6 @@ docker compose run --rm --no-deps --entrypoint python etl -m pytest tests -q
   `output/vibrancy_index.executed.ipynb`. On the author's machine step 1 took about 40 seconds and step 2 about 10.
 - **What each step writes.** Step 1 only reads the database and writes files to `output/`. Step 2 rewrites
   `vibrancy/index.html` and the figures in `vibrancy/images/`. Neither step writes to the database.
-- **Optional browser check.** `python3 scripts/check_vibrancy_page.py` opens the built page in headless Chrome or Chromium
-  in a light and a dark theme at desktop width and once at phone width, prints PASS or FAIL for each check, and saves
-  screenshots to `output/`. It
-  uses only the Python standard library, so it runs on your machine, not in Docker. It looks for the browser at the path in
-  the environment variable `VIBRANCY_CHROME`, for example
-  `VIBRANCY_CHROME=/usr/bin/chromium python3 scripts/check_vibrancy_page.py`. If it finds no browser it prints SKIP and
-  stops without an error. The page's map library loads from a CDN, so this check needs an internet connection too.
 
 ### Build the methodology book
 
@@ -165,7 +158,6 @@ jupyter-book build --html      # the site is written to vibrancy/book/_build/htm
 | `vibrancy_index.ipynb` | The analysis, one explained step per cell: the fourteen indicators, the score, the checks and the further analyses (place types, hot spots, income, walking counts) |
 | `index_tools.py` | The index functions (entropy, standardised scores, assigning points and polygons to SA2s, the street intersection count, place types, Moran's I), each with a small test |
 | `scripts/build_vibrancy_story.py`, `scripts/vibrancy_story_template.html` | Build the story page and its static figures from the files in `output/` |
-| `scripts/check_vibrancy_page.py`, `scripts/check_vibrancy_page.js`, `scripts/check_vibrancy_shots.js` | The optional browser check of the built page, and the extra screenshots it takes |
 | `output/` | The generated results (git-ignored): the scores, the checks, the further analyses and the executed notebook |
 | `vibrancy/index.html`, `vibrancy/images/` | The data story page and its static figures |
 | `vibrancy/book/` | The methodology book (in progress); the rest of `vibrancy/` is the story page above |

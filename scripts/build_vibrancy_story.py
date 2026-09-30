@@ -4,7 +4,6 @@
 import argparse
 import html
 import json
-import textwrap
 from pathlib import Path
 
 import geopandas as gpd
@@ -150,8 +149,6 @@ OUTLINE_KEY_LABELS = {
 UNAVAILABLE_COLOR = COLOR_ROLES["light"]["unavailable"]
 MUTED_COLOR = COLOR_ROLES["light"]["muted"]
 NOT_SCORED_OUTLINE = COLOR_ROLES["light"]["not-scored"]
-# The Moran scatterplot starts its score axis here; an SA2 that scores lower is named in a note. The page uses the same value.
-MORAN_AXIS_MINIMUM = 60
 RANK_QUINTILES = [
     ("Top quintile", 1, 75),
     ("Second quintile", 76, 149),
@@ -162,9 +159,6 @@ RANK_QUINTILES = [
 # The stability chart's thin "swings to" bar is this fraction lighter than its median bar's own quintile
 # colour (0 none, 1 white); the page's own tint() function uses the same fraction.
 RANK_RANGE_TINT_AMOUNT = 0.5
-# The distance and foot-traffic scatters fade every dot to this colour except their labelled exceptions;
-# it is the page's own --map-fade, light theme (the static figures use the light palette throughout).
-MAP_FADE_COLOR = "#c9cbc6"
 # The distance chart's labelled outer exceptions: farther than this from the CBD, the top few by score.
 DISTANCE_OUTER_KM = 10
 DISTANCE_OUTER_COUNT = 3
@@ -831,15 +825,6 @@ def assert_figure_text_layout(fig):
             assert not first.overlaps(second), f"Text overlaps: {first_text} / {second_text}"
 
 
-def wrapped_title(text, width):
-    """Return a found sentence wrapped onto two or more lines of about `width` characters each.
-
-    A few of the found sentences are longer than a small figure can show on one line; matplotlib does not
-    wrap a title itself, so this uses the standard library the same way the page's own text-wrapping does.
-    """
-    return "\n".join(textwrap.wrap(text, width=width))
-
-
 def quiet_axes(axis):
     """Apply light gridlines and quiet axes to a matplotlib axis."""
     axis.spines[["top", "right", "left"]].set_visible(False)
@@ -1022,82 +1007,6 @@ def figure_pillars(regions, out_dir):
     return paths
 
 
-def figure_hotspots(regions, out_dir):
-    """Save the cluster map: the five local Moran's I classes, whole region beside the built-up frame."""
-    from matplotlib.patches import Patch
-    scored = regions[regions["scored"] == True]
-    counts = scored["hotspot_class"].value_counts()
-    classes = [Patch(facecolor=HOTSPOT_COLORS[name], edgecolor=MUTED_COLOR, linewidth=0.4,
-                     label=f"{HOTSPOT_NAMES[name]} ({int(counts.get(name, 0))})") for name in HOTSPOT_ORDER]
-    return save_two_panel_map(regions, "hotspot_class", HOTSPOT_COLORS, "Hot spots: where nearby SA2s score alike",
-                              "vibrancy_hotspots.png", out_dir, classes + [hollow_key_swatch("Not scored")])
-
-
-def padded_score_range(values):
-    """Round a range of scores out to whole tens with a margin of four, as the page's charts do."""
-    return int(np.floor((min(values) - 4) / 10) * 10), int(np.ceil((max(values) + 4) / 10) * 10)
-
-
-def moran_axis_note(scored):
-    """Say which SA2s score below the scatterplot's axis start, with their scores; return "" if none do."""
-    left_of_axis = scored[scored["vibrancy_score"] < MORAN_AXIS_MINIMUM].sort_values("vibrancy_score")
-    if left_of_axis.empty:
-        return ""
-    named = ", ".join(f"{row.sa2_name} (score {row.vibrancy_score:.1f})" for row in left_of_axis.itertuples())
-    subject = "1 SA2 is" if len(left_of_axis) == 1 else f"{len(left_of_axis)} SA2s are"
-    return f"{subject} left of the axis: {named}."
-
-
-def figure_moran(regions, stats, out_dir):
-    """Save the Moran scatterplot: each SA2's score against its neighbours' average, with a line of slope Moran's I."""
-    import matplotlib.pyplot as plt
-    from matplotlib.lines import Line2D
-    scored = regions[(regions["scored"] == True) & regions["neighbour_average_score"].notna()]
-    plotted = scored[scored["vibrancy_score"] >= MORAN_AXIS_MINIMUM]
-    moran_i = stats["global_i"]
-    x_low, x_high = MORAN_AXIS_MINIMUM, padded_score_range(scored["vibrancy_score"])[1]
-    y_low, y_high = padded_score_range(plotted["neighbour_average_score"])
-    fig, axis = plt.subplots(figsize=(8, 5.6), dpi=180)
-    axis.axvline(100, color="#c3c2b7", linewidth=0.8, linestyle=(0, (4, 3)), zorder=1)
-    axis.axhline(100, color="#c3c2b7", linewidth=0.8, linestyle=(0, (4, 3)), zorder=1)
-    axis.plot([x_low, x_high], [100 + moran_i * (x_low - 100), 100 + moran_i * (x_high - 100)], color="#0b0b0b", linewidth=0.9, zorder=2)
-    for name in reversed(HOTSPOT_ORDER):
-        subset = plotted[plotted["hotspot_class"] == name]
-        edge = MUTED_COLOR if name == "not significant" else "#fcfcfb"
-        axis.scatter(subset["vibrancy_score"], subset["neighbour_average_score"], s=22, color=HOTSPOT_COLORS[name],
-                     edgecolors=edge, linewidths=0.5, zorder=3)
-    axis.set_xlim(x_low, x_high)
-    axis.set_ylim(y_low, y_high)
-    axis.set_xticks(np.arange(x_low, x_high + 1, 10))
-    axis.set_yticks(np.arange(y_low, y_high + 1, 10))
-    axis.set_xlabel("Vibrancy score")
-    axis.set_ylabel("Average score of neighbouring SA2s")
-    axis.set_title(stats["moran"]["title"], loc="left", fontsize=12, fontweight="bold")
-    corners = [("Low-high", 0.015, 0.97, "left", "top"), ("High-high", 0.985, 0.97, "right", "top"),
-               ("Low-low", 0.015, 0.03, "left", "bottom"), ("High-low", 0.985, 0.03, "right", "bottom")]
-    for label, x_position, y_position, horizontal, vertical in corners:
-        axis.text(x_position, y_position, label, transform=axis.transAxes, ha=horizontal, va=vertical, fontsize=9, color="#52514e")
-    slope_x = x_low + 3
-    axis.text(slope_x, 100 + moran_i * (slope_x - 100) + 3, f"slope {moran_i:.2f} (Moran's I)", fontsize=9, color="#0b0b0b")
-    counts = scored["hotspot_class"].value_counts()
-    key = [Line2D([], [], marker="o", linestyle="none", markersize=5, markerfacecolor=HOTSPOT_COLORS[name],
-                  markeredgecolor=MUTED_COLOR if name == "not significant" else "#fcfcfb", markeredgewidth=0.5,
-                  label=f"{HOTSPOT_NAMES[name]} ({int(counts.get(name, 0))})") for name in HOTSPOT_ORDER]
-    axis.legend(handles=key, loc="upper center", bbox_to_anchor=(0.5, -0.13), ncol=2, frameon=False, fontsize=8.5)
-    quiet_axes(axis)
-    axis.grid(axis="x", color="#e1e0d9", linewidth=0.8)
-    axis.tick_params(axis="x", pad=9)
-    note = moran_axis_note(scored)
-    if note:
-        fig.text(0.01, 0.005, note, fontsize=9, color="#52514e")
-    fig.tight_layout(rect=(0, 0.04 if note else 0, 1, 1))
-    assert_figure_text_layout(fig)
-    path = Path(out_dir) / "images" / "vibrancy_moran.png"
-    fig.savefig(path, dpi=180, bbox_inches="tight")
-    plt.close(fig)
-    return path
-
-
 def figure_equity(stats, out_dir):
     """Save paired top- and bottom-quintile equity bars."""
     import matplotlib.pyplot as plt
@@ -1154,81 +1063,6 @@ def figure_rank_ranges(stats, out_dir):
     fig.tight_layout()
     assert_figure_text_layout(fig)
     path = Path(out_dir) / "images" / "vibrancy_rank_ranges.png"
-    fig.savefig(path, dpi=180)
-    plt.close(fig)
-    return path
-
-
-def figure_foot_traffic(regions, stats, tables_dir, out_dir):
-    """Save labelled weekday and weekend walking-count scatterplots, faded except the three busiest SA2s."""
-    import matplotlib.pyplot as plt
-    from matplotlib.ticker import StrMethodFormatter
-    foot = read_table(tables_dir, "vibrancy_foot_traffic_sa2.csv", ["sa2_code", "weekday_average", "weekend_average"])
-    paths = []
-    for day, filename in [("weekday", "vibrancy_foot_traffic_weekday.png"), ("weekend", "vibrancy_foot_traffic_weekend.png")]:
-        columns = ["sa2_code", f"{day}_average", "sa2_name"]
-        values = foot[[column for column in columns if column in foot]].merge(
-            regions[["sa2_code", "vibrancy_score", "rank_class"]],
-            on="sa2_code",
-            how="left",
-        ).dropna()
-        fig, axis = plt.subplots(figsize=(6, 3.8), dpi=180)
-        axis.scatter(values["vibrancy_score"], values[f"{day}_average"], color=MAP_FADE_COLOR, s=32)
-        top_three = values.nlargest(3, f"{day}_average")
-        label_offsets = [6, -12, 10]
-        for position, (_, row) in enumerate(top_three.iterrows()):
-            axis.scatter([row["vibrancy_score"]], [row[f"{day}_average"]], color=RAMP[int(row["rank_class"])], s=32, zorder=3)
-            axis.annotate(row["sa2_name"], (row["vibrancy_score"], row[f"{day}_average"]),
-                          xytext=(-4, label_offsets[position]), textcoords="offset points",
-                          ha="right", va="bottom", fontsize=9)
-        maximum_count = values[f"{day}_average"].max()
-        axis.set_xlim(70, 130)
-        axis.set_xticks(np.arange(70, 131, 10))
-        axis.set_ylim(0, maximum_count * 1.15)
-        axis.set_yticks(np.arange(10000, maximum_count + 1, 10000))
-        axis.set_xlabel("Vibrancy score")
-        axis.set_ylabel(f"{day.title()} average walking count")
-        axis.set_title(stats["foot_titles"][day], loc="left", fontsize=10, fontweight="bold")
-        axis.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
-        quiet_axes(axis)
-        fig.tight_layout()
-        assert_figure_text_layout(fig)
-        path = Path(out_dir) / "images" / filename
-        fig.savefig(path, dpi=180)
-        plt.close(fig)
-        paths.append(path)
-    return paths
-
-
-def figure_distance(regions, stats, out_dir):
-    """Save distance from the CBD against vibrancy rank, faded except the labelled outer exceptions."""
-    import matplotlib.pyplot as plt
-    scored = regions[regions["scored"] == True]
-    fig, axis = plt.subplots(figsize=(7, 5.0), dpi=180)
-    axis.scatter(scored["distance_km"], scored["vibrancy_score"], color=MAP_FADE_COLOR, s=16, alpha=0.8)
-    outer = distance_outer_exceptions(scored)
-    # Small offsets that stay close to each point (a large fixed shift could land on the y-axis now that
-    # the labelled exceptions can sit as close as just past 10 km, not only far out), alternating above and
-    # below by position so two exceptions with a similar distance and score do not label on top of each other.
-    label_offsets = [(-4, -12, "top"), (-4, 14, "bottom"), (-4, 30, "bottom")]
-    for (_, row), (x_offset, y_offset, vertical) in zip(outer.iterrows(), label_offsets):
-        axis.scatter([row["distance_km"]], [row["vibrancy_score"]], color=RAMP[int(row["rank_class"])], s=16, zorder=3)
-        axis.annotate(row["sa2_name"], (row["distance_km"], row["vibrancy_score"]), xytext=(x_offset, y_offset),
-                      textcoords="offset points", ha="right", va=vertical, fontsize=8)
-    axis.axhline(100, color="#898781", linewidth=1, linestyle="--")
-    # The found sentence names an SA2 and rarely fits one line at this figure's width, so it wraps to two.
-    axis.set_title(wrapped_title(stats["distance"]["title"], 65), loc="left", fontsize=11, fontweight="bold")
-    maximum_distance = scored["distance_km"].max()
-    axis.set_xlim(0, maximum_distance + 5)
-    axis.set_xticks(np.arange(0, maximum_distance + 1, 20))
-    axis.set_xlabel("Distance from the Sydney GPO (km)")
-    axis.set_ylabel("Vibrancy score")
-    axis.set_ylim(70, 130)
-    axis.set_yticks(np.arange(70, 131, 10))
-    quiet_axes(axis)
-    fig.tight_layout()
-    assert_figure_text_layout(fig)
-    path = Path(out_dir) / "images" / "vibrancy_distance.png"
     fig.savefig(path, dpi=180)
     plt.close(fig)
     return path
@@ -1414,12 +1248,8 @@ def build(scores=OUTPUT_DIR / "vibrancy_scores.csv", out_dir=ROOT / "vibrancy", 
         written.append(figure_main_map(regions, stats, out_dir))
         written.extend(figure_pillars(regions, out_dir))
         written.append(figure_place_types(regions, stats, out_dir))
-        written.append(figure_hotspots(regions, out_dir))
-        written.append(figure_moran(regions, stats, out_dir))
         written.append(figure_equity(stats, out_dir))
         written.append(figure_rank_ranges(stats, out_dir))
-        written.extend(figure_foot_traffic(regions, stats, tables_dir, out_dir))
-        written.append(figure_distance(regions, stats, out_dir))
     if page:
         out_dir.mkdir(parents=True, exist_ok=True)
         page_path = out_dir / "index.html"

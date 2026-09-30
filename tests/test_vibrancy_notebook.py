@@ -12,8 +12,7 @@ INTERNAL_WORDS = re.compile(r"\bphase\b|stop point|the brief|\bcodex\b|the owner
 PLOTTING_CODE = re.compile(r"matplotlib|\bplt\.|\.plot\(|\.hist\(|\.savefig\(")
 FIGURE_ORDER = [
     "vibrancy_map.png", "vibrancy_intensity_map.png", "vibrancy_diversity_map.png", "vibrancy_design_map.png",
-    "vibrancy_place_types.png", "vibrancy_hotspots.png", "vibrancy_moran.png", "vibrancy_distance.png", "vibrancy_equity.png",
-    "vibrancy_rank_ranges.png", "vibrancy_foot_traffic_weekday.png", "vibrancy_foot_traffic_weekend.png",
+    "vibrancy_place_types.png", "vibrancy_equity.png", "vibrancy_rank_ranges.png",
 ]
 
 
@@ -80,7 +79,7 @@ def figure_section_cells():
     return cells[heading_positions[0]:]
 
 
-def test_figures_section_shows_twelve_figures_in_order_each_after_a_lead_in():
+def test_figures_section_shows_seven_figures_in_order_each_after_a_lead_in():
     """Each figure is one display cell directly after a one-line markdown lead-in."""
     section = figure_section_cells()
     shown = []
