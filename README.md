@@ -7,8 +7,23 @@ public data, and tells the result as a data story.
 The index is a proxy. It measures the conditions that allow street activity, from open data on businesses, residents,
 transport, streets and land use. It does not measure how many people are actually there.
 
+## Overview
+
+- **The question.** Which parts of Greater Sydney have what lively, varied, walkable streets usually need: people living
+  nearby, businesses and services, public transport, a mix of uses and a connected street network?
+- **The areas.** The unit is the SA2, a statistical area drawn by the Australian Bureau of Statistics. An SA2 is usually a
+  suburb or a few suburbs joined together, and Greater Sydney has 373 of them.
+- **The score.** For each SA2 we measured 14 things (the indicators) in three groups (the pillars): Intensity (how much is
+  packed into the area), Diversity (how varied the mix of businesses and land uses is) and Design (how connected the streets
+  are). We put them on a common scale and averaged them. A score of 100 is the Greater Sydney average, and 10 points is a
+  typical spread. The SA2s are then ranked and split into five equal groups called quintiles.
+- **What it is for.** It is a screening tool: it points to places worth a closer look. It is not a count of people on the
+  street, and it does not say which areas are better to live in.
+- **What it cannot do.** Individual ranks move when the method changes, the data has gaps, and the check against real walking
+  counts covers only 16 inner-city SA2s. The page has a Limitations section and a Next steps section that say this in detail.
+
 **Status.** The data pipeline is built and tested: it downloads 15 sources, then cleans, checks and loads them into
-PostGIS as 17 tables. The vibrancy index (fourteen indicators in three pillars), its checks and the data story page are
+PostGIS as 17 data tables, plus two tables for source records and quality checks. The vibrancy index (fourteen indicators in three pillars), its checks and the data story page are
 built and tested too. The methodology book in `vibrancy/book/` is still being written.
 
 ## Results
@@ -37,13 +52,23 @@ outlines.*
   are in low-low clusters. The page shows them as a filled hot-spot layer on the map and as a scatterplot of each SA2's
   score against the average score of its neighbours. The clusters are descriptive: no correction is made for testing many
   areas.
-- **Four kinds of place.** Splitting the SA2s by density and diversity gives four place types: dense and diverse (117
-  SA2s), dense and less diverse (101), less dense and diverse (79) and less dense and less diverse (75).
+- **Four kinds of place.** Splitting the SA2s by density and diversity gives four place types: dense and diverse (126
+  SA2s), dense and less diverse (91), less dense and diverse (80) and less dense and less diverse (75). An SA2 is
+  dense when the mean of its Intensity and Design scores is at or above 100, and diverse when its Diversity score is at
+  or above 100.
 - **A weak check against walking counts.** Measured walking counts exist for only 16 inner-city SA2s, and all of them rank
   1 to 29 of 372. The scores and the counts are at best weakly related (Spearman correlation 0.31 for weekday counts and 0.17
   for weekend counts). So the check can only test the ordering among the busiest places, and it is weak evidence.
 - **The limits.** The index is a proxy for conditions that can support street activity, not a measure of how busy places
-  are, and it uses registered businesses, which are mostly home-based.
+  are, and it uses registered businesses, which are mostly home-based. The page has a Limitations section, with pictures,
+  in plain language. In short: the check against real walking counts only covers the top of the ranking; the cluster labels
+  are not corrected for running many tests (about 19 of the 372 tests could look special by chance alone, as a rough guide);
+  the pillars have equal weights by choice, with Intensity covering ten indicators and Diversity and Design two each; the
+  inputs come from different years (2021 to 2026); and SA2s differ a lot in size. None of this shows cause.
+- **Next steps.** The page also lists next steps, one for each limitation: shopfront-level business data, jobs and floor-area
+  data, one reference year for all inputs, finer areas, walking counts from outside the inner city, a false discovery rate
+  correction for the clusters, other weights, and rank ranges instead of single ranks. These are ideas to test, and we do not
+  know yet whether they would change the ranking.
 
 ## View the story
 
@@ -54,6 +79,10 @@ directly in a browser without visiting the link above. It
 has a map you can click, charts, a sortable table and what-if tools (change the pillar weights, or pick one of the 22
 alternative versions). The map needs an internet connection, because the map library (Leaflet) loads from a CDN. The map
 has no background tiles by design, so it shows the SA2 shapes only.
+
+The page starts with a short "what this page shows" card that defines the main terms. A contents list (beside the page on a
+wide screen, folded at the top on a narrow one) links to every section. The page ends with how the score was built
+(including a table of the 14 indicators and the equations), the limitations, the next steps and a glossary.
 
 On the page you can:
 
@@ -132,8 +161,8 @@ docker compose run --rm --no-deps --entrypoint python etl -m pytest tests -q
 ```
 
 - **Order matters.** `output/` is git-ignored, so a fresh clone must run step 1 before step 2: the page is built from the
-  files in `output/`. The notebook is saved without outputs; the executed copy is written to
-  `output/vibrancy_index.executed.ipynb`. On the author's machine step 1 took about 40 seconds and step 2 about 10.
+  files in `output/`. The notebook is saved with its outputs, so you can read the results without
+  running it; step 1 writes a fresh executed copy to `output/vibrancy_index.executed.ipynb`. On the author's machine step 1 took about 40 seconds and step 2 about 10.
 - **What each step writes.** Step 1 only reads the database and writes files to `output/`. Step 2 rewrites
   `vibrancy/index.html` and the figures in `vibrancy/images/`. Neither step writes to the database.
 
@@ -161,7 +190,7 @@ jupyter-book build --html      # the site is written to vibrancy/book/_build/htm
 | `output/` | The generated results (git-ignored): the scores, the checks, the further analyses and the executed notebook |
 | `vibrancy/index.html`, `vibrancy/images/` | The data story page and its static figures |
 | `vibrancy/book/` | The methodology book (in progress); the rest of `vibrancy/` is the story page above |
-| `tests/` | Tests for the downloader, the unzipping, the parsers, the quality checks, the index functions, the structure of the notebook, the saved hot-spot table, the story page and its figures |
+| `tests/` | Tests for the downloader, the unzipping, the parsers, the quality checks, the index functions, the saved score table and the saved hot-spot table |
 | `docker-compose.yml`, `Dockerfile` | The PostGIS database and the Python environment |
 | `requirements.txt`, `requirements.lock` | The direct dependencies, and a full pin of every package (the Docker image installs the lock file) |
 | `.env.example` | Template for the private `.env` |

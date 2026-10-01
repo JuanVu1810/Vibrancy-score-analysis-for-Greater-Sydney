@@ -138,12 +138,21 @@ def test_score_index_averages_the_three_pillars():
 
 
 def test_place_type_uses_density_and_diversity_quadrants():
-    assert classify_place_type(1.0, 1.0, -0.5) == "dense and diverse"
-    assert classify_place_type(1.0, -1.0, 0.5) == "dense and less diverse"
-    assert classify_place_type(-1.0, 1.0, -0.5) == "less dense and diverse"
-    assert classify_place_type(-1.0, -1.0, -0.5) == "less dense and less diverse"
-    assert pd.isna(classify_place_type(np.nan, 0.0, 0.0))
-    assert classify_place_type(-1.0, np.nan, -0.5) == "less dense and less diverse"
+    """Scores are on the 100-centred scale: density is the mean of Intensity and Design, and 100 is the cut."""
+    assert classify_place_type(110.0, 110.0, 95.0) == "dense and diverse"
+    assert classify_place_type(110.0, 90.0, 105.0) == "dense and less diverse"
+    assert classify_place_type(90.0, 110.0, 95.0) == "less dense and diverse"
+    assert classify_place_type(90.0, 90.0, 95.0) == "less dense and less diverse"
+    assert pd.isna(classify_place_type(np.nan, 100.0, 100.0))
+    assert classify_place_type(90.0, np.nan, 95.0) == "less dense and less diverse"
+
+
+def test_place_type_cut_is_exactly_the_displayed_100():
+    """A score of exactly 100 counts as dense or diverse; a score just under 100 does not."""
+    assert classify_place_type(100.0, 100.0, 100.0) == "dense and diverse"
+    assert classify_place_type(99.9, 99.9, 99.9) == "less dense and less diverse"
+    assert classify_place_type(96.7, 100.1, 103.4) == "dense and diverse"
+    assert classify_place_type(96.7, 100.1, 102.9) == "less dense and diverse"
 
 
 def chain_weights():

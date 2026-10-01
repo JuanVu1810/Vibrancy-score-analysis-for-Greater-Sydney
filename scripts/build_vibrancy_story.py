@@ -4,6 +4,8 @@
 import argparse
 import html
 import json
+import math
+import random
 from pathlib import Path
 
 import geopandas as gpd
@@ -27,11 +29,11 @@ COLOR_ROLES = {
         "cluster-low-high": "#C4A6E6", "cluster-not-significant": "#E4E3DD",
         "unavailable": "#d7d7d3", "muted": "#898781",
         "intensity-1": "#EEDCBC", "intensity-2": "#E2C28A", "intensity-3": "#D6A858", "intensity-4": "#CC912D",
-        "intensity-5": "#C27A00", "intensity-text": "#7A4300", "intensity-bar": "#C27A00",
+        "intensity-5": "#C27A00", "intensity-text": "#C27A00", "intensity-bar": "#C27A00",
         "diversity-1": "#97C2BB", "diversity-2": "#71ACA2", "diversity-3": "#4C968A", "diversity-4": "#268172",
-        "diversity-5": "#006B5A", "diversity-text": "#005548", "diversity-bar": "#006B5A",
+        "diversity-5": "#006B5A", "diversity-text": "#006B5A", "diversity-bar": "#006B5A",
         "design-1": "#D0BDC8", "design-2": "#AD8B9E", "design-3": "#8A5875", "design-4": "#6C2D52",
-        "design-5": "#4D002D", "design-text": "#6A0D3F", "design-bar": "#4D002D",
+        "design-5": "#4D002D", "design-text": "#4D002D", "design-bar": "#4D002D",
         "place-dense-diverse": "#006B5A", "place-less-dense-diverse": "#71ACA2",
         "place-dense-less-diverse": "#A47F6B", "place-less-dense-less-diverse": "#E3D5C7",
         # A place colour used as text (map legends, the "kinds of place" scatter corners) needs its
@@ -56,9 +58,9 @@ COLOR_ROLES = {
         "intensity-1": "#8C7D52", "intensity-2": "#A3915D", "intensity-3": "#BAA568", "intensity-4": "#DDC279",
         "intensity-5": "#FFE08A", "intensity-text": "#FFE08A", "intensity-bar": "#FFE08A",
         "diversity-1": "#105C4F", "diversity-2": "#0C7563", "diversity-3": "#088E78", "diversity-4": "#04A78C",
-        "diversity-5": "#00C0A0", "diversity-text": "#52E0C0", "diversity-bar": "#00C0A0",
+        "diversity-5": "#00C0A0", "diversity-text": "#00C0A0", "diversity-bar": "#00C0A0",
         "design-1": "#321E27", "design-2": "#5A243E", "design-3": "#7A2A51", "design-4": "#9A2F63",
-        "design-5": "#BA3476", "design-text": "#E968AA", "design-bar": "#BA3476",
+        "design-5": "#BA3476", "design-text": "#BA3476", "design-bar": "#BA3476",
         "place-dense-diverse": "#00C0A0", "place-less-dense-diverse": "#0C7563",
         "place-dense-less-diverse": "#AB8876", "place-less-dense-less-diverse": "#3F3224",
         # Same lighten-until-4.5:1 rule as the light theme above, but lightened rather than darkened,
@@ -105,6 +107,13 @@ HOTSPOT_STYLES = {
     "high-low": {"weight": 1.2, "dash": "2 2"},
     "low-high": {"weight": 1.2, "dash": "7 2 2 2"},
 }
+# The squares picture in the Limitations section: how many squares per row, the pixels from one square to the next,
+# and the size of a square. The chance picture uses the usual 0.05 cut-off for a "significant" local Moran's I test.
+GRID_COLUMNS = 31
+GRID_STEP = 14
+GRID_SQUARE = 11
+CHANCE_LEVEL = 0.05
+CHANCE_SEED = 20261001
 # A card fact whose density is below these limits is shown as a whole-number total instead ("6 street intersections in
 # total"), because a small density such as 0.05 per km² is hard to picture. The page's profile card uses the same limits.
 SMALL_RESIDENTS_PER_HA = 1
@@ -384,12 +393,13 @@ def moran_card_text(regions, global_i):
     )
     paragraphs = [
         "Moran's I asks whether neighbouring SA2s look alike. A value of 0 means no pattern and 1 means neighbours look "
-        f"exactly alike; here it is {global_i:.2f}, so nearby SA2s often score alike.",
+        f"exactly alike; here it is {global_i:.2f}, so nearby SA2s often score alike. This does not tell us why.",
         f"Of the {len(scored)} scored SA2s, {counts['high-high']} are high-high (a high score with high-scoring "
         f"neighbours) and {counts['low-low']} are low-low (a low score with low-scoring neighbours). "
         f"{outliers} The other {counts['not significant']} are not clusters.".replace("  ", " "),
         low_low_sentence + ".",
-        "Clusters are descriptive: no correction is made for testing many areas.",
+        "Clusters are descriptive: no correction is made for testing many areas, so some of them could appear by chance "
+        "(the Limitations section explains this).",
     ]
     return {"title": title, "paragraphs": paragraphs}
 
@@ -417,7 +427,7 @@ def distance_card_title(regions):
     example = distance_outer_exceptions(scored).iloc[0]["sa2_name"]
     return (
         f"The median score falls from {near:.1f} near the centre to {far:.1f} beyond 40 km, "
-        f"but a few centres such as {example} buck the trend"
+        f"but a few centres such as {example} stand out from the trend"
     )
 
 
@@ -529,9 +539,9 @@ def build_cards(regions):
                 "when the method changes."
             ),
             "Sydney (South) - Haymarket": (
-                "It is dense and well connected, while its Diversity bar sits close to the Greater "
-                "Sydney average. This is a central example of a dense place that the index does "
-                "not describe as especially diverse."
+                "It is dense and well connected, and its Diversity bar sits almost exactly on the "
+                "Greater Sydney average, just above the line that makes a place count as diverse. A small "
+                "change in the data could move it into the dense and less diverse group."
             ),
             "Gosford - Springfield": (
                 "It has high Diversity without the same concentration of places as the leading "
@@ -629,6 +639,44 @@ def limit_items(scored, foot_sites):
     ]
 
 
+def squares_svg(total, highlighted, description):
+    """Return an inline SVG of `total` squares, row by row, with the squares at the `highlighted` positions marked."""
+    rows = math.ceil(total / GRID_COLUMNS)
+    squares = []
+    for position in range(total):
+        x = (position % GRID_COLUMNS) * GRID_STEP
+        y = (position // GRID_COLUMNS) * GRID_STEP
+        css_class = "square on" if position in highlighted else "square"
+        squares.append(f'<rect class="{css_class}" x="{x}" y="{y}" width="{GRID_SQUARE}" height="{GRID_SQUARE}" rx="2"/>')
+    width = GRID_COLUMNS * GRID_STEP
+    height = rows * GRID_STEP
+    return (f'<svg class="squares" viewBox="0 0 {width} {height}" role="img" '
+            f'aria-label="{html.escape(description)}">' + "".join(squares) + "</svg>")
+
+
+def walking_count_squares(scored_sa2s, foot_sites):
+    """Return the picture and its caption for the SA2s that have walking counts, shown among all scored SA2s in rank order."""
+    ranks = sorted(int(rank) for rank in foot_sites["vibrancy_rank"].dropna())
+    if not ranks:
+        return squares_svg(scored_sa2s, set(), "No SA2s have walking counts."), "No SA2s have walking counts."
+    highlighted = {rank - 1 for rank in ranks}
+    description = (f"{len(ranks)} of {scored_sa2s} scored SA2s have walking counts. "
+                   f"All of them are ranked {ranks[0]} to {ranks[-1]}.")
+    caption = (f"{len(ranks)} of the {scored_sa2s} scored SA2s have walking counts, and all of them rank "
+               f"{ranks[0]} to {ranks[-1]}. The other {scored_sa2s - len(ranks)} could not be checked this way.")
+    return squares_svg(scored_sa2s, highlighted, description), caption
+
+
+def chance_squares(scored_sa2s):
+    """Return the picture and its caption for how many tests pass by chance alone, with squares placed at random."""
+    by_chance = round(CHANCE_LEVEL * scored_sa2s)
+    highlighted = set(random.Random(CHANCE_SEED).sample(range(scored_sa2s), by_chance))
+    description = f"{by_chance} of {scored_sa2s} squares are marked, placed at random."
+    caption = (f"Illustration only: {scored_sa2s} squares for {scored_sa2s} tests, with {by_chance} marked at "
+               f"random. The squares are not real SA2s.")
+    return squares_svg(scored_sa2s, highlighted, description), caption, by_chance
+
+
 def place_type_split_counts(place_types):
     """Return the two counts behind panel 3's found title: dense-and-diverse SA2s, and dense-and-less-diverse ones."""
     dense_diverse = int(place_types.loc[place_types["place_type"] == "dense and diverse", "sa2s"].iloc[0])
@@ -638,7 +686,7 @@ def place_type_split_counts(place_types):
 
 def place_type_split_title(dense_diverse, dense_less):
     """Return panel 3's found title, built from the same two counts the page puts in its own heading."""
-    return f"Dense places split in two: {dense_diverse} have a varied business mix and {dense_less} do not"
+    return f"Dense places split in two: {dense_diverse} have a varied mix of businesses and land uses and {dense_less} do not"
 
 
 def equity_income_shares(equity):
@@ -664,20 +712,17 @@ def foot_traffic_spearman(foot, day):
 
 def foot_traffic_day_title(foot, day):
     """Return the found title of one day's foot-traffic scatter, the interactive panel's own heading."""
-    return f"Busier {day}s track a higher score too (Spearman {foot_traffic_spearman(foot, day):.2f})"
+    return f"{day.capitalize()} counts have only a weak link with the score (Spearman {foot_traffic_spearman(foot, day):.2f})"
 
 
 def methods_detail():
-    """Return the plain-language methods summary for the final panel."""
+    """Return the short methods summary that opens the final panel."""
     return (
-        "Intensity brings together ten density measures: "
-        "residents, businesses, retail, arts and hospitality businesses, transport stops, shops, "
-        "hospitals, public amenities, traffic lights, polling places and school catchments. "
-        "Diversity uses the mix of industries among businesses and the mix of land uses, while "
-        "Design uses street intersections and crossings. The twelve density measures are "
-        "log-transformed first, then all measures are put on a common scale and averaged within "
-        "each pillar and across the three pillars; an SA2 missing a pillar is scored on the pillars "
-        "it has, and 22 alternative versions test how much the ranking depends on the choices."
+        "The score combines 14 indicators in three pillars. Intensity is how much is packed into an area "
+        "(ten indicators), Diversity is how varied its mix of businesses and land uses is (two), and Design "
+        "is how connected its streets are (two). Each indicator is put on a common scale and averaged, and "
+        "the three pillars count equally. 22 alternative versions test how much the ranking depends on "
+        "these choices."
     )
 
 
@@ -1154,6 +1199,11 @@ def page_html(regions, stats):
             "score_middle_share": stats["score_middle_share"],
             "card_names": [card["name"] for card in stats["cards"]]}
     limits = "".join(f"<li>{html.escape(item)}</li>" for item in stats["limits"])
+    scored_sa2s = headline["scored_sa2s"]
+    coverage_picture, coverage_caption = walking_count_squares(scored_sa2s, chart["foot_sites"])
+    chance_picture, chance_caption, by_chance = chance_squares(scored_sa2s)
+    scored_regions = regions[regions["scored"] == True]
+    labelled_clusters = int((scored_regions["hotspot_class"] != "not significant").sum())
     replacements = {
         "TITLE": stats["headline_title"],
         "TOP_AREA": f"{headline['top_area_share']:.1%}", "TOP_RESIDENTS": f"{headline['top_resident_share']:.1%}",
@@ -1185,6 +1235,10 @@ def page_html(regions, stats):
         "CARDS": cards,
         "TYPE_ROWS": type_rows,
         "LIMITS": limits,
+        "COVERAGE_PICTURE": coverage_picture, "COVERAGE_CAPTION": html.escape(coverage_caption),
+        "CHANCE_PICTURE": chance_picture, "CHANCE_CAPTION": html.escape(chance_caption),
+        "BY_CHANCE": str(by_chance),
+        "LABELLED_CLUSTERS": str(labelled_clusters),
         "METHODS_DETAIL": pillar_html(stats["methods_detail"]),
         "COLOR_VARIABLES_LIGHT": css_color_variables("light"),
         "COLOR_VARIABLES_DARK": css_color_variables("dark"),
@@ -1227,8 +1281,8 @@ def card_html(card):
         f'<article class="place-card type-{css_name}" data-place-type="{html.escape(card["place_type"])}">'
         f'<p class="kicker type-chip">{html.escape(card["place_type"])}</p>'
         f'<h3>{html.escape(card["name"])}</h3>'
-        f'<p class="rank">Score {card["score"]:.1f}, rank {card["rank"]} of 372, '
-        f'ranks {card["rank_min"]} to {card["rank_max"]} across the variants.</p>'
+        f'<p class="rank">Score {card["score"]:.1f}, rank {card["rank"]} of 372 (1 is the highest). '
+        f'Across the 22 alternative versions of the score its rank runs from {card["rank_min"]} to {card["rank_max"]}.</p>'
         '<div class="axis-labels"><span>70</span><span>Greater Sydney average</span>'
         f'<span>130</span></div><div class="pillars">{pillars}</div>'
         f'<ul class="facts">{facts}</ul><p>{html.escape(card["text"])}</p></article>'

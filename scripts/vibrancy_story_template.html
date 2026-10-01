@@ -34,7 +34,8 @@
 }*{
     box-sizing:border-box
 }html,body{
-    overflow-x:hidden
+    overflow-x:hidden;
+    overflow-x:clip
 }body{
     margin:0;
     ;
@@ -237,11 +238,17 @@
     font-size:10px;
     font-weight:400;
     line-height:1.1
-}.pillar.intensity > span,.pillar.intensity > b,.pillar-text.intensity-text{
+}.pillar-text.intensity-text{
+    --cw:var(--intensity-4)
+}.pillar-text.diversity-text{
+    --cw:var(--diversity-4)
+}.pillar-text.design-text{
+    --cw:var(--design-4)
+}.pillar.intensity > span,.pillar.intensity > b{
     color:var(--intensity-text)
-}.pillar.diversity > span,.pillar.diversity > b,.pillar-text.diversity-text{
+}.pillar.diversity > span,.pillar.diversity > b{
     color:var(--diversity-text)
-}.pillar.design > span,.pillar.design > b,.pillar-text.design-text{
+}.pillar.design > span,.pillar.design > b{
     color:var(--design-text)
 }.pillar.intensity .bar i{
     background:var(--intensity-bar)
@@ -597,8 +604,186 @@
         min-height:220px
     }
 }
+.two-col{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+    margin:12px 0
+}.two-col>div{
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px 16px
+}.two-col h3{
+    margin-bottom:4px
+}.two-col ul,.limits,.plain{
+    margin:6px 0 0;
+    padding-left:20px
+}#limitations h3,#next-steps h3{
+    margin-top:20px
+}#limitations .two-col h3{
+    margin-top:0
+}.plain li{
+    margin-bottom:6px
+}.indicator-table{
+    width:100%;
+    table-layout:fixed;
+    border-collapse:collapse;
+    font-size:14px
+}.indicator-table th:nth-child(1){
+    width:26%
+}.indicator-table th:nth-child(3){
+    width:22%
+}.indicator-table td,.indicator-table th{
+    position:static;
+    white-space:normal;
+    overflow-wrap:break-word
+}.indicator-table th,.indicator-table td{
+    padding:7px;
+    border-bottom:1px solid var(--grid);
+    text-align:left;
+    vertical-align:top
+}.indicator-table .pillar-row th{
+    padding-top:14px;
+    border-bottom:2px solid var(--axis)
+}details.step{
+    border-top:1px solid var(--border);
+    padding:12px 0
+}details.step summary{
+    cursor:pointer;
+    font-size:17px;
+    font-weight:700
+}details.step summary span{
+    display:block;
+    margin-top:2px;
+    color:var(--ink2);
+    font-size:14px;
+    font-weight:400
+}details.step[open]>summary{
+    margin-bottom:10px
+}#toc{
+    margin:12px 16px 0;
+    font-size:14px
+}#toc summary{
+    cursor:pointer;
+    font-weight:700
+}#toc ol{
+    margin:6px 0 0;
+    padding:0;
+    list-style:none
+}#toc a{
+    display:block;
+    padding:4px 8px;
+    border-left:3px solid transparent;
+    color:var(--ink2);
+    text-decoration:none
+}#toc a:hover{
+    color:var(--ink)
+}#toc a[aria-current]{
+    border-left-color:var(--ink);
+    color:var(--ink);
+    font-weight:700
+}.callout{
+    margin:12px 0;
+    padding:10px 16px;
+    border-left:3px solid var(--axis);
+    background:var(--plane)
+}@media (min-width:1100px){
+    .layout{
+        display:grid;
+        grid-template-columns:200px minmax(0,1120px);
+        column-gap:8px;
+        justify-content:center
+    }#toc{
+        position:sticky;
+        top:16px;
+        align-self:start;
+        max-height:calc(100vh - 32px);
+        margin:36px 0 0 16px;
+        overflow-y:auto
+    }#toc summary{
+        display:none
+    }
+}.callout h3{
+    margin:0 0 4px;
+    font-size:16px
+}.callout ul{
+    margin:6px 0 0
+}.formula,.formula-note{
+    display:block
+}.formula{
+    margin:6px 0 10px;
+    padding:8px 14px;
+    border-left:3px solid var(--axis);
+    background:var(--plane);
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:16px;
+    overflow-x:auto
+}.formula-note{
+    margin:0 0 10px;
+    color:var(--ink2);
+    font-size:13.5px
+}span.cw,span.pillar-text{
+    color:var(--cw,inherit);
+    font-weight:700
+}span.cw.cw-pale{
+    color:var(--ink);
+    text-decoration:underline;
+    text-decoration-color:var(--cw);
+    text-decoration-thickness:3px;
+    text-underline-offset:3px
+}.squares{
+    display:block;
+    width:100%;
+    max-width:620px;
+    height:auto;
+    margin:10px 0 4px
+}.square{
+    fill:var(--axis)
+}.square.on{
+    fill:var(--c4)
+}.glossary{
+    margin-top:14px;
+    border-top:1px solid var(--border);
+    padding-top:10px
+}.glossary summary{
+    cursor:pointer;
+    font-weight:700
+}.glossary dt{
+    font-weight:700;
+    margin-top:8px
+}.glossary dd{
+    margin:2px 0 0;
+    color:var(--ink2)
+}
+@media (max-width:640px){
+    .two-col{
+        grid-template-columns:1fr
+    }.indicator-table{
+        min-width:560px
+    }
+}
 </style></head>
 <body>
+<div class="layout">
+<nav id="toc" aria-label="Contents">
+<details open>
+<summary>Contents</summary>
+<ol>
+<li><a href="#about">About this page</a></li>
+<li><a href="#where">Where it is most vibrant</a></li>
+<li><a href="#why">Which ingredients drive it</a></li>
+<li><a href="#kinds">Kinds of place</a></li>
+<li><a href="#examples">Four example places</a></li>
+<li><a href="#equity">Who lives there</a></li>
+<li><a href="#foot-traffic-check">Walking counts</a></li>
+<li><a href="#stability">How sure can we be</a></li>
+<li><a href="#methods">How it was made</a></li>
+<li><a href="#limitations">Limitations</a></li>
+<li><a href="#next-steps">Next steps</a></li>
+<li><a href="#table-view">Table of all scores</a></li>
+</ol>
+</details>
+</nav>
 <div class="wrap">
 <header class="hero">
 <div class="hero-top">
@@ -610,37 +795,59 @@
 </label>
 </div>
 <h1>{{TITLE}}</h1>
-<p class="dek">We scored {{SCORED_SA2S}} of {{TOTAL_SA2S}} SA2s. The score is standardised, so 100 is the Greater Sydney average and 10 points is one standard deviation. The top quintile takes up {{TOP_AREA}} of the land we scored, holds {{TOP_RESIDENTS}} of residents, and is concentrated around the inner city and major centres.</p>
+<p class="dek">This page ranks the areas of Greater Sydney by how many of the conditions for lively street life they have: people living nearby, businesses, public transport, a mix of activities and a connected street network. We call the result a vibrancy score. It is a screening tool that points to places worth a closer look, and it does not count how many people are actually on the street.</p>
+<p class="dek">We scored {{SCORED_SA2S}} of {{TOTAL_SA2S}} areas (called SA2s). The score is standardised, so 100 is the Greater Sydney average and 10 points is one standard deviation, a typical spread. If you rank every area and split the list into five equal groups, each group is a quintile. The top quintile takes up {{TOP_AREA}} of the land we scored, holds {{TOP_RESIDENTS}} of residents, and is concentrated around the inner city and major centres.</p>
 <div class="kpis">
 <div class="kpi">
 <span>Land and residents</span>
 <strong>{{TOP_AREA}} / {{TOP_RESIDENTS}}</strong>
-<span>top quintile of scored SA2s</span>
+<span>share of the land and of the residents that are in the top quintile of scored SA2s</span>
 </div>
 <div class="kpi">
-<span>Top-quintile access</span>
+<span>Living in a top-quintile SA2</span>
 <strong>{{EQUITY_HIGH}} vs {{EQUITY_LOW}}</strong>
-<span>higher- and lower-income areas</span>
+<span>share of residents who do, in higher-income areas against lower-income areas</span>
 </div>
 <div class="kpi">
 <span>Top-25 stability</span>
 <strong>{{TOP_OVERLAP}} of 25</strong>
-<span>the same SA2s across variants</span>
+<span>of the top 25 SA2s stay in the top 25 across the 22 alternative versions of the score</span>
 </div>
 <div class="kpi">
 <span>SA2s scored</span>
 <strong>{{SCORED_SA2S}} of {{TOTAL_SA2S}}</strong>
-<span>one area has no residents or businesses</span>
+<span>one area has no residents or registered businesses, so it is left out</span>
 </div>
 </div>
 </header>
 <main>
+<section class="card" id="about">
+<p class="kicker">New here? Start with this</p>
+<h2>What this page shows</h2>
+<p class="sub">These are the ideas the page relies on. Every chart below also has a short "How to read it" note, and a glossary near the end explains the technical terms.</p>
+<ul class="plain">
+<li><strong>Vibrancy.</strong> Here it means the conditions that make lively, varied and walkable street life possible: people living nearby, businesses and services, public transport, a mix of uses and a connected street network. It is a proxy, which means a stand-in. It is not a count of how busy the streets are.</li>
+<li><strong>SA2.</strong> A statistical area drawn by the Australian Bureau of Statistics. An SA2 is usually a suburb or a few suburbs joined together, and Greater Sydney has {{TOTAL_SA2S}}. Some large outer SA2s are mostly bushland or farmland.</li>
+<li><strong>The score.</strong> For each SA2 we worked out 14 measures (called indicators), put them on a common scale, averaged them within three groups (called pillars) and then averaged the three pillars. A score of 100 is the Greater Sydney average, and 110 is one typical spread above it. The score only means something compared with other SA2s: it is not a percentage, and 100 is not a pass mark.</li>
+<li><strong>The three pillars.</strong> <span class="pillar-text intensity-text">Intensity</span> is how much is packed into an area: residents, businesses, shops, stops and services for each square kilometre. <span class="pillar-text diversity-text">Diversity</span> is how varied the mix of businesses and land uses is. <span class="pillar-text design-text">Design</span> is how connected and easy to cross the streets are, using street intersections and pedestrian crossings.</li>
+<li><strong>Rank and quintile.</strong> Rank 1 is the highest-scoring SA2 and rank {{SCORED_SA2S}} is the lowest. A quintile is one fifth of the ranked list, so the top quintile is the highest-scoring fifth.</li>
+<li><strong>How to use the page.</strong> Start with the map: click any area to open its card, or use the buttons to switch what the map shows. Each chart below it asks one question and gives the answer in its heading. <a href="#methods">How it was made</a> explains how the score was built, Limitations says what it cannot tell you, Next steps says what could improve it, and a table at the bottom lets you sort every score and download it.</li>
+</ul>
+<p class="note">Please read the Limitations section before using the ranking for any decision. In short, the score describes conditions, not crowds, and individual ranks move when the method changes.</p>
+</section>
 <section class="card" id="where">
 <p class="kicker">Where is it most vibrant?</p>
 <h2>Vibrancy is highest in the inner city, and big centres like Parramatta and Liverpool stand out</h2>
-<p class="sub">The map groups scores into quintiles. Nearby SA2s often have similar scores (global Moran’s I {{GLOBAL_I}}, p = {{GLOBAL_P}}).</p>
+<p class="sub">The map shades every SA2 by its quintile: the darker the colour, the higher the SA2 sits in the ranking. Nearby SA2s often have similar scores (global Moran’s I {{GLOBAL_I}}, p = {{GLOBAL_P}}), so high-scoring areas tend to sit together instead of being scattered. The p-value comes from 999 random shuffles of the scores, so the smallest value it can show is 0.001.</p>
 <p class="how">
-<strong>How to read it:</strong> Colours show quintiles of the ranking, and the legend gives each quintile's score range. {{SCORE_MIDDLE_SHARE}} of SA2s score between 90 and 110.</p>
+<strong>How to read it:</strong> Colours show quintiles of the ranking, and the legend gives each quintile's score range. {{SCORE_MIDDLE_SHARE}} of SA2s score between 90 and 110, so most places are close to the average and the gaps between neighbouring ranks are often small. Click or tap an area to open its card, or type a name in the search box. The buttons above the map change what it shows:</p>
+<ul class="plain">
+<li><strong>Overall score:</strong> the final score, in quintiles.</li>
+<li><strong>Intensity, Diversity and Design:</strong> one pillar at a time, each with its own quintiles.</li>
+<li><strong>Place types:</strong> four kinds of place, from whether an area is dense and whether it is diverse.</li>
+<li><strong>Hot spots:</strong> groups of neighbouring SA2s with similar scores. These are descriptive, and the Limitations section explains why.</li>
+</ul>
+<p class="how">The buttons under those jump the map to Greater Sydney, the inner city, Parramatta or Liverpool.</p>
 <div class="map-tools">
 <div class="chips" role="group" aria-label="Map layers">
 <button class="chip layer" data-layer="overall" aria-pressed="true">Overall score</button>
@@ -679,10 +886,10 @@
 </aside>
 </div>
 <p class="note">{{MAP_CAPTION}}</p>
-<p class="source">Data: ABS SA2 boundaries (2021) and the fourteen indicators behind this score, from ABS, Transport for NSW, NSW Education, AEC, NSW Spatial Services, City of Sydney and OpenStreetMap (full list in Methods). Covers every map layer: Overall score, the three pillars, Place types and Hot spots.</p>
+<p class="source">Data: ABS SA2 boundaries (2021) and the fourteen indicators behind this score, from ABS, Transport for NSW, NSW Education, AEC, NSW Spatial Services, City of Sydney and OpenStreetMap (full list in <a href="#indicators">How it was made</a>). Covers every map layer: Overall score, the three pillars, Place types and Hot spots.</p>
 <details class="drawer" id="what-if">
 <summary>What if the pillars counted differently?</summary>
-<p class="source">Weights affect Overall score only. Pillar layers, place types and hot spots remain based on the baseline.</p>
+<p class="how">The overall score gives Intensity, Diversity and Design the same weight. That is a choice, not a fact, so you can change it here. Drag a slider to make a pillar count for more or less, or pick a preset, and watch the map and the ranks move. This is a way to see how much the ranking depends on that choice, and there is no single right answer. Weights affect the Overall score only. The pillar layers, place types and hot spots stay as they are in the baseline, which is the main version of the score with equal weights.</p>
 <div class="drawer-grid">
 <label class="intensity" data-pillar="intensity">Intensity <b id="intensity-pct">33%</b>
 <input id="weight-intensity" type="range" min="0" max="100" step="5" value="50">
@@ -704,7 +911,7 @@
 </p>
 <ol id="rank-moves" class="moves">
 </ol>
-<label class="source">Sensitivity check <select id="variant-picker">
+<label class="source">Or pick one of the 22 alternative versions of the score, each of which changes one choice in how it is built <select id="variant-picker">
 </select>
 </label>
 <p id="variant-summary" class="source">
@@ -722,6 +929,7 @@
 <button class="chip quintile-focus-clear" data-chart="distance-chart" aria-pressed="true">Show all</button>
 </div>
 <p id="distance-chart-focus-state" class="state">Showing: baseline</p>
+<p class="how"><strong>How to read it:</strong> Each dot is one SA2. It sits in a column for its straight-line distance from the Sydney GPO, which stands in for the city centre, and its height is its score. The named dots are examples. Use the quintile buttons to see where the SA2s of one quintile sit.</p>
 <div id="distance-chart" class="chart" aria-label="Vibrancy score by distance group">
 </div>
 <p id="distance-axis-note" class="note">
@@ -731,6 +939,7 @@
 <div class="chart-card">
 <p class="kicker">How unusual is a busy SA2?</p>
 <h3 class="found-title">{{HISTOGRAM_TITLE}}</h3>
+<p class="how"><strong>How to read it:</strong> Each bar counts the SA2s whose score falls in a two-point range, so a taller bar means more SA2s have about that score. The bracket marks 90 to 110, which is within 10 points of the Greater Sydney average of 100. SA2s far from the middle are the unusual ones.</p>
 <div id="histogram-chart" class="chart" aria-label="Vibrancy score histogram">
 </div>
 <p class="source">Data: the distribution of this page's vibrancy score across all scored SA2s.</p>
@@ -738,6 +947,7 @@
 <div class="chart-card moran-card">
 <p class="kicker">Do neighbouring SA2s score alike?</p>
 <h3 class="moran-title">{{MORAN_TITLE}}</h3>
+<p class="how"><strong>How to read it:</strong> Each dot is one SA2. Across is its own score. Up is the average score of the SA2s that share a border or a corner with it, its neighbours. The lines at 100 mark the Greater Sydney average. Dots in the top right are high scorers with high-scoring neighbours, and dots in the bottom left are low scorers with low-scoring neighbours. The solid line is the overall trend, and the more the dots rise along it from bottom left to top right, the more neighbours look alike. Red dots are high-high clusters, purple dots are low-low clusters, pale dots are outliers and grey dots are not clusters.</p>
 <div class="moran-body">
 <div>
 <div id="moran-chart" class="chart" aria-label="Each SA2's score against the average score of its neighbours">
@@ -753,9 +963,9 @@
 <section class="card" id="why">
 <p class="kicker">Which ingredients drive it?</p>
 <h2>Dense places usually have fine-grained streets too: Intensity and Design rise together, Diversity does not</h2>
-<p class="sub">The three pillars are shown on the same 100-centred score scale, but each has its own quintiles on the map.</p>
+<p class="sub">Intensity is how much is packed into an SA2, Design is how connected its streets are, and Diversity is how varied its mix of businesses and land uses is. The three pillars are shown on the same score scale, centred on 100, but each has its own quintiles on the map.</p>
 <p class="how">
-<strong>How to read it:</strong> Use a button to show one pillar on the main map.</p>
+<strong>How to read it:</strong> Use a button to show one pillar on the main map. In the charts below, each dot is one SA2. The caption under each chart gives a Spearman correlation, a number from -1 to 1 for how closely two rankings agree: 0 means no link, and 1 means they put the SA2s in exactly the same order.</p>
 <div class="chips">
 <button class="chip jump-layer pillar-button intensity" data-layer="intensity"><i class="layer-dot"></i>Show Intensity on the map</button>
 <button class="chip jump-layer pillar-button diversity" data-layer="diversity"><i class="layer-dot"></i>Show Diversity on the map</button>
@@ -795,13 +1005,14 @@
 </p>
 <p class="source">Data: this page's Density (Intensity and Design combined) and Diversity pillar scores.</p>
 </div>
+<p class="note">Areas with a lot going on for each square kilometre usually also have a closely knit street network, so those two pillars rise together. A varied mix of businesses and land uses does not follow density in the same way, so Diversity adds something the other two pillars do not. This describes a pattern across areas and does not say what causes it.</p>
 </section>
 <section class="card" id="kinds">
 <p class="kicker">Are all vibrant places vibrant in the same way?</p>
-<h2>Dense places split in two: {{DENSE_DIVERSE_COUNT}} have a varied business mix and {{DENSE_LESS_COUNT}} do not</h2>
-<p class="sub">Density is the average of Intensity and Design. Diversity is considered separately.</p>
+<h2>Dense places split in two: {{DENSE_DIVERSE_COUNT}} have a varied mix of businesses and land uses and {{DENSE_LESS_COUNT}} do not</h2>
+<p class="sub">Here "density" is a score we calculate: the average of the Intensity and Design scores. It is not the count per square kilometre used for the individual indicators in <a href="#methods">How it was made</a>. Diversity is kept separate. An SA2 counts as dense if its density score is at or above the Greater Sydney average, and as diverse if its Diversity score is at or above the average. That gives four place types.</p>
 <p class="how">
-<strong>How to read it:</strong> Select a row to keep that type in colour and fade the other three. Select it again to show all four.</p>
+<strong>How to read it:</strong> The table gives the number of SA2s of each type, the number of people who live in them, and a few of the highest-ranked examples. Select a row to keep that type in colour on the map and fade the other three. Select it again to show all four.</p>
 <div class="type-wrap">
 <table class="type-table">
 <thead>
@@ -815,39 +1026,40 @@
 <tbody>{{TYPE_ROWS}}</tbody>
 </table>
 </div>
-<p class="note">Four scored SA2s without a Diversity pillar count as less diverse.</p>
+<p class="note">Four scored SA2s have no Diversity pillar, because they have too few businesses or too little mixed land use for it to be calculated, so they count as less diverse. The cut-off at the average is sharp, so an SA2 close to the line could switch type after a small change.</p>
 <p class="source">Data: this page's Density and Diversity pillar scores and place-type rule.</p>
 </section>
-<section class="card">
+<section class="card" id="examples">
 <p class="kicker">What does this look like on the ground?</p>
 <h2>Four places show what the score does and does not capture</h2>
-<p class="sub">Each bar uses a fixed axis from 70 to 130 around the Greater Sydney average of 100.</p>
+<p class="sub">Four real SA2s, picked to show different stories. Each bar uses a fixed axis from 70 to 130 around the Greater Sydney average of 100.</p>
 <p class="how">
-<strong>How to read it:</strong> Facts are raw densities and their percentiles among scored SA2s.</p>
+<strong>How to read it:</strong> The three bars show the SA2's Intensity, Diversity and Design scores: a mark to the right of the middle is above the Greater Sydney average, and a mark to the left is below it. The facts under the bars are raw counts for each square kilometre (or totals, where the count is very small). Each fact is compared with the other scored SA2s, for example "higher than 90% of SA2s". The rank range shows how far the SA2's rank moves across the 22 alternative versions of the score.</p>
 <div class="four">{{CARDS}}</div>
-<p class="note">The industrial example shows a limit: this screening score does not stand in for jobs.</p>
-<p class="source">Data: this page's pillar scores and raw indicator counts for each named SA2 (indicator sources in Methods).</p>
+<p class="note">The industrial example shows a limit. Wetherill Park Industrial has many registered businesses but few residents, so it ranks low, even though many people may work there. This screening score does not stand in for jobs.</p>
+<p class="source">Data: this page's pillar scores and raw indicator counts for each named SA2 (indicator sources in <a href="#indicators">How it was made</a>).</p>
 </section>
-<section class="card">
+<section class="card" id="equity">
 <p class="kicker">Who lives in the most vibrant places?</p>
 <h2>{{EQUITY_TITLE}}</h2>
 <p class="sub">Median income is an area average, not a household measure.</p>
 <p class="how">
-<strong>How to read it:</strong> Each pair compares top-quintile and bottom-quintile shares within one resident-weighted income group.</p>
+<strong>How to read it:</strong> We sorted the SA2s by their median employee income (from the ABS) and cut them into three groups, lower-, middle- and higher-income areas, so that each group holds about the same number of residents. For each group, one bar shows the share of its residents who live in a top-quintile SA2, and the other shows the share who live in a bottom-quintile SA2. If vibrancy were spread evenly across the groups, each bar would be roughly 20%, because a quintile is a fifth of the SA2s.</p>
 <p class="note" id="equity-key"><span style="color:var(--c4)">Dark</span>: top quintile of SA2s. <span style="color:var(--chart-secondary)">Grey</span>: bottom quintile of SA2s.</p>
 <div id="equity-chart" class="chart" aria-label="Equity shares by income group">
 </div>
-<p class="note">The difference describes areas, not individual households.</p>
+<p class="note">The difference describes areas, not individual households. A higher-income household can live in a lower-income area and the other way round. The chart does not show why the gap exists.</p>
 <p class="source">Data: ABS median employee income by SA2, and this page's vibrancy score.</p>
 </section>
 <section class="card" id="foot-traffic-check">
 <p class="kicker">Does it match what's actually busy?</p>
 <h2 id="foot-traffic-title">Measured walking counts align weakly with the score: Spearman {{WEEKDAY_CORRELATION}} on weekdays and {{WEEKEND_CORRELATION}} on weekends</h2>
 <p class="how">
-<strong>How to read it:</strong> The City of Sydney only counts pedestrians at 16 inner-city sites (ranked 1 to 29, all in the top quintile), so a quintile button below is only offered for the quintile that has data, and this check tests ordering among the busiest places only.</p>
+<strong>How to read it:</strong> The City of Sydney counts people walking past 120 sites across 16 inner-city SA2s, and recent counts exist for 115 of those sites. For each site we averaged the daily counts from the four most recent surveys (October 2024 to March 2026), and then averaged the sites in each SA2. In each chart below one dot is one SA2: across is its vibrancy score and up is its average daily count. If the score followed busy streets closely, the dots would climb steadily from left to right. The Spearman correlation is a number from -1 to 1 for how closely two rankings agree, where 0 means no link and 1 means the same order.</p>
+<p class="how">All 16 SA2s rank 1 to 29, within the top quintile, and the button below only offers that quintile. So this check tests ordering among top-ranked areas only. It cannot tell us whether the score works for the rest of Greater Sydney, and with only 16 SA2s it is weak evidence either way.</p>
 <div class="chart-card">
 <p class="kicker">Weekday walking counts</p>
-<h3 class="found-title">Busier weekdays track a higher score too (Spearman {{WEEKDAY_CORRELATION}})</h3>
+<h3 class="found-title">Weekday counts have only a weak link with the score (Spearman {{WEEKDAY_CORRELATION}})</h3>
 <div class="chips quintile-focus" role="group" aria-label="Focus a quintile on this chart">
 <button class="chip quintile-focus-button quintile-4" data-chart="weekday-chart" data-quintile="4" aria-pressed="false"><i class="layer-dot"></i>Top quintile</button>
 <button class="chip quintile-focus-clear" data-chart="weekday-chart" aria-pressed="true">Show all</button>
@@ -859,7 +1071,7 @@
 </div>
 <div class="chart-card">
 <p class="kicker">Weekend walking counts</p>
-<h3 class="found-title">Busier weekends track a higher score too (Spearman {{WEEKEND_CORRELATION}})</h3>
+<h3 class="found-title">Weekend counts have an even weaker link with the score (Spearman {{WEEKEND_CORRELATION}})</h3>
 <div class="chips quintile-focus" role="group" aria-label="Focus a quintile on this chart">
 <button class="chip quintile-focus-button quintile-4" data-chart="weekend-chart" data-quintile="4" aria-pressed="false"><i class="layer-dot"></i>Top quintile</button>
 <button class="chip quintile-focus-clear" data-chart="weekend-chart" aria-pressed="true">Show all</button>
@@ -870,29 +1082,220 @@
 <p class="source">Data: City of Sydney weekend pedestrian counts (16 inner-city SA2s only) and this page's vibrancy score.</p>
 </div>
 </section>
-<section class="card">
+<section class="card" id="stability">
 <p class="kicker">How sure can we be?</p>
 <h2>The top group is stable, but individual ranks are not: the median SA2 moves {{MEDIAN_RANGE}} places</h2>
-<p class="sub">The top 25 retains {{TOP_OVERLAP}} of the same 25 SA2s across variants.</p>
+<p class="sub">The top 25 retains {{TOP_OVERLAP}} of the same 25 SA2s across variants. A variant is a rebuilt version of the score with one choice changed, for example dropping one data source or skipping the log transform. We made 22 of them. The top group stays mostly the same, but where one SA2 lands in the ranking depends a lot on the choices made.</p>
 <p class="how">
-<strong>How to read it:</strong> Each bar shows the typical (median) movement for that quintile; the named SA2 is its most volatile member.</p>
+<strong>How to read it:</strong> For every SA2 we looked at its best and worst rank across the baseline and the 22 variants. Each bar shows the typical (median) gap between those two ranks for one quintile, and the named SA2 is the most volatile member of that quintile. A longer bar means the SA2s in that group are less certain about their rank.</p>
 <div id="stability-chart" class="chart" data-band-order="Top quintile (75 SA2s)|Second quintile (74 SA2s)|Middle quintile (75 SA2s)|Fourth quintile (74 SA2s)|Bottom quintile (74 SA2s)" aria-label="Rank movement across sensitivity checks">
 </div>
-<p class="note">Ranks near the top and the bottom of the table hold still; ranks in the middle move the most.</p>
-<p class="source">Data: this page's vibrancy score recomputed under 22 method variants (see Methods).</p>
+<p class="note">Ranks near the top and the bottom of the table hold still; ranks in the middle move the most. This is probably because many SA2s in the middle have very similar scores, so a small change can reorder them.</p>
+<p class="source">Data: this page's vibrancy score recomputed under 22 method variants (listed in <a href="#checks">How it was made</a>, step 4).</p>
 <p class="note">Try changing the weights below the map and watch some of these ranks move.</p>
 <button id="try-what-if" class="button">Try it on the map</button>
-<h3>Limits</h3>
-<ul id="limits-list" class="limits">{{LIMITS}}</ul>
 </section>
-<section class="card">
+<section class="card" id="methods">
 <p class="kicker">How was it made?</p>
-<h2>How the score is built</h2>
-<p class="sub">Fourteen indicators are transformed, standardised across scored SA2s, averaged into three equal-weight pillars, then ranked.</p>
+<h2>How the data and score were built</h2>
 <p id="methods-detail">{{METHODS_DETAIL}}</p>
-<p class="how">
-<strong>How to read it:</strong> The score is standardised: 100 is the Greater Sydney average, and 10 points is one standard deviation.</p>
-<p class="source">Source dates: 2021 to 2026. Data credits: ABS, Transport for NSW, NSW Education, AEC, NSW Spatial Services, City of Sydney and OpenStreetMap. Contains OpenStreetMap data (c) OpenStreetMap contributors.</p>
+<div class="callout">
+<h3>Why "density" has two formulas</h3>
+<p>The word appears twice in these methods, for two different jobs. Only the first one goes into the score.</p>
+<ul class="plain">
+<li><strong>Per-area value (step 2): used to calculate the score.</strong> The count of something divided by the area of the SA2, such as stops per square kilometre. The 12 per-area indicators are the raw inputs that become the Intensity and Design pillars.</li>
+<li><strong>Density score (step 4): used to describe the results.</strong> The average of the finished Intensity and Design scores. It is worked out after the score exists, only to sort SA2s into dense or less dense for the place types and the chart. It is not an input to the score, and it does not change any score or rank.</li>
+</ul>
+</div>
+<p class="note">Open any step below for the detail. The limits of these methods are listed in the Limitations section after it.</p>
+<details class="step" id="etl">
+<summary>1. Prepare and check the data<span>15 public sources cleaned, checked and placed into SA2s</span></summary>
+<ul class="plain">
+<li>Python cleaned and checked 15 public sources and loaded 17 data tables into PostgreSQL/PostGIS, a database that can store map data. Two more tables record where each source came from and the results of the quality checks, making 19 tables in all.</li>
+<li>Every downloaded file is checked against a recorded checksum, so a file that has changed is caught before it is used.</li>
+<li>SQL and GeoPandas (a Python mapping library) put each located item, such as a bus stop or a pedestrian crossing, into the SA2 that contains it. A point exactly on a boundary goes to the SA2 with the lower code, so it is counted once.</li>
+<li>Records with a missing location, and records outside Greater Sydney, were counted as each indicator was built. For every source, the number that came in equals the number assigned plus the number dropped, and the assigned totals were checked against the totals expected from the data, so the exclusions can be checked.</li>
+</ul>
+</details>
+<details class="step" id="indicators">
+<summary>2. Measure 14 things in every SA2<span>Ten for Intensity, two for Diversity and two for Design</span></summary>
+<p>An indicator is one measurable ingredient of street life. Most are counts for each square kilometre of the whole SA2, so a large SA2 is not given a high score just for being large.</p>
+<p class="formula">per-area value = number of items in the SA2 ÷ area of the SA2 (km²)</p>
+<p class="formula-note">Residents are counted per hectare instead: residents ÷ (area in km² × 100). The 12 indicators measured this way are called the per-area indicators below. This is a different idea from the "density" used for place types, which is explained in step 4.</p>
+<div class="type-wrap">
+<table class="indicator-table">
+<thead>
+<tr>
+<th>Indicator</th>
+<th>What it measures</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="pillar-row"><th colspan="3"><span class="pillar-text intensity-text">Intensity</span>: how much is packed into the area (10 indicators)</th></tr>
+<tr><td>Residents per hectare</td><td>People living in the SA2, for each hectare.</td><td>ABS regional population</td></tr>
+<tr><td>Businesses per km²</td><td>All registered businesses. Many are home-based, so this shows where firms are registered more than where shopfronts are.</td><td>ABS counts of businesses</td></tr>
+<tr><td>Retail, arts and hospitality businesses per km²</td><td>Registered businesses in retail trade, accommodation and food services, and arts and recreation, which are kinds of business that people visit.</td><td>ABS counts of businesses</td></tr>
+<tr><td>Transport stops per km²</td><td>Stops and platforms on the public transport timetable. Stations and entrances are not counted separately.</td><td>Transport for NSW</td></tr>
+<tr><td>Everyday shops per km²</td><td>Shops that people use day to day. Petrol stations are included.</td><td>OpenStreetMap</td></tr>
+<tr><td>Hospitals per km²</td><td>Hospital sites. Most SA2s have none, so this indicator is close to a yes or no.</td><td>NSW Spatial Services</td></tr>
+<tr><td>Public toilets and drinking water per km²</td><td>Public toilets and drinking-water points.</td><td>OpenStreetMap</td></tr>
+<tr><td>Traffic lights per km²</td><td>Locations of traffic lights.</td><td>Transport for NSW</td></tr>
+<tr><td>Polling places per km²</td><td>Places where people voted in the 2025 federal election, a rough marker of community buildings such as schools and halls.</td><td>Australian Electoral Commission</td></tr>
+<tr><td>School catchments per km²</td><td>Public school intake zones. A catchment that spans several SA2s is split between them by area, so it counts once in total.</td><td>NSW Department of Education</td></tr>
+<tr class="pillar-row"><th colspan="3"><span class="pillar-text diversity-text">Diversity</span>: how varied the mix is (2 indicators)</th></tr>
+<tr><td>Mix of industries</td><td>How evenly the SA2's businesses are spread across the 19 industries. 0 means every business is in one industry, and 1 means an even spread. It is not calculated if the SA2 has fewer than 10 businesses.</td><td>ABS counts of businesses</td></tr>
+<tr><td>Mix of land uses</td><td>How evenly the SA2's land is split between five uses: commercial, education, hospital or medical, parkland and residential. It is not calculated if fewer than two of the five have any land.</td><td>ABS Census mesh blocks</td></tr>
+<tr class="pillar-row"><th colspan="3"><span class="pillar-text design-text">Design</span>: how connected the streets are (2 indicators)</th></tr>
+<tr><td>Street intersections per km²</td><td>Points where at least three road ends meet, such as T-junctions and crossroads, leaving out slip and link roads. More intersections means a finer street grid.</td><td>OpenStreetMap roads</td></tr>
+<tr><td>Pedestrian crossings per km²</td><td>Crossings with traffic signals, markings or zebra stripes.</td><td>OpenStreetMap</td></tr>
+</tbody>
+</table>
+</div>
+<p>The two mix indicators use normalised entropy, which measures how evenly something is spread:</p>
+<p class="formula"><i>H</i> = − Σ<sub><i>i</i></sub> <i>p<sub>i</sub></i> · ln(<i>p<sub>i</sub></i>) ÷ ln(<i>K</i>)</p>
+<p class="formula-note"><i>p<sub>i</sub></i> is the share of the SA2's businesses (or land) that falls in category <i>i</i>, and <i>K</i> is the number of categories: 19 industries or 5 land uses. Categories with no businesses or land are left out of the sum. <i>H</i> is 0 when everything is in one category and 1 when it is spread evenly.</p>
+</details>
+<details class="step" id="score-steps">
+<summary>3. Turn the indicators into a score<span>Six steps, from the 14 measures to a ranked score</span></summary>
+<ol class="plain">
+<li><strong>Choose which SA2s get a score.</strong> Centennial Park has no residents and no registered businesses, so it is left out and the other {{SCORED_SA2S}} are scored.</li>
+<li><strong>Shrink the extremes.</strong> The 12 per-area indicators are log-transformed first. Without that, a few SA2s with very large counts would dominate. After it, the gap between 10 and 100 for each square kilometre counts for about as much as the gap between 100 and 1,000. The two mix indicators already run from 0 to 1, so they are not transformed.
+<span class="formula"><i>x</i>′ = ln(1 + <i>x</i>)</span></li>
+<li><strong>Put every indicator on the same scale.</strong> Counts for each square kilometre and mix measures use different units, so each indicator is converted to a z-score: how many typical spreads (standard deviations) an SA2 sits above or below the average of the scored SA2s.
+<span class="formula"><i>z</i> = (<i>x</i> − <i>μ</i>) ÷ <i>σ</i></span>
+<span class="formula-note"><i>μ</i> is the average and <i>σ</i> the standard deviation of the indicator across the scored SA2s (dividing by the number of SA2s). Missing values are ignored.</span></li>
+<li><strong>Average within each pillar, then across pillars.</strong> The three pillars get equal weight. An SA2 that is missing a pillar is scored on the pillars it has.
+<span class="formula">Intensity = average of its 10 <i>z</i> values</span>
+<span class="formula">Diversity = average of its 2 <i>z</i> values &nbsp;&nbsp; Design = average of its 2 <i>z</i> values</span>
+<span class="formula"><i>V</i> = (Intensity + Diversity + Design) ÷ 3</span>
+<span class="formula-note">Only the values and pillars that exist are averaged. Because Intensity has ten indicators and the others two, each Diversity or Design indicator carries more weight than each Intensity indicator.</span></li>
+<li><strong>Rescale.</strong> The final number is rescaled so that 100 is the Greater Sydney average and 10 points is one standard deviation. {{SCORE_MIDDLE_SHARE}} of the scored SA2s sit between 90 and 110.
+<span class="formula">Score = 100 + 10 × (<i>V</i> − average of <i>V</i>) ÷ standard deviation of <i>V</i></span>
+<span class="formula-note">The average and standard deviation are taken across the scored SA2s. Each pillar score shown on the page is rescaled the same way from its own average.</span></li>
+<li><strong>Rank and group.</strong> The SA2s are ranked from 1 (highest) and split into five quintiles of 74 or 75 SA2s each.
+<span class="formula">quintile = 5 − ⌊(rank − 1) × 5 ÷ number of scored SA2s⌋</span>
+<span class="formula-note">Quintile 5 is the top fifth (ranks 1 to 75) and quintile 1 is the bottom fifth.</span></li>
+</ol>
+</details>
+<details class="step" id="checks">
+<summary>4. Check the result<span>Stability, neighbours, place types, income and walking counts</span></summary>
+<ul class="plain">
+<li><strong>Stability.</strong> The score was rebuilt 22 ways and the ranks were compared. Each version changes one thing: dropping one data source (12 versions), skipping the log transform, scaling from 0 to 1 instead of with z-scores, weighting every indicator equally, using Intensity alone, using a three-indicator benchmark (residents, land-use mix and street intersections), counting the number of industries instead of how evenly they are spread, leaving out the four industries that are mostly home-based, and three other ways of giving school catchments to SA2s.
+<span class="formula">rank range = worst rank − best rank, across the baseline and the 22 versions</span>
+<span class="formula">Spearman correlation = ordinary correlation between the two lists of ranks</span></li>
+<li><strong>Neighbours.</strong> Moran's I, a standard measure, checks whether nearby SA2s score alike, and a local version marks groups of similar neighbours as hot spots and cold spots.
+<span class="formula">global <i>I</i> = Σ<sub><i>i</i></sub> <i>z<sub>i</sub></i> · (Σ<sub><i>j</i></sub> <i>w<sub>ij</sub></i> <i>z<sub>j</sub></i>) ÷ Σ<sub><i>i</i></sub> <i>z<sub>i</sub></i>²</span>
+<span class="formula">local <i>I<sub>i</sub></i> = <i>z<sub>i</sub></i> × (average <i>z</i> of the neighbours of <i>i</i>)</span>
+<span class="formula"><i>p</i> = (1 + shuffles with |<i>I</i> shuffled| ≥ |<i>I</i> observed|) ÷ (1 + 999)</span>
+<span class="formula-note"><i>z<sub>i</sub></i> is SA2 <i>i</i>'s standardised score, and <i>w<sub>ij</sub></i> is a weight that is the same for every neighbour of <i>i</i> and zero for other SA2s, so that the weights of each SA2 add up to 1. Neighbours are SA2s that share a border or corner. The average of the local values equals the global <i>I</i>. The local test shuffles the other SA2s' scores 999 times. An SA2 is labelled when <i>p</i> &lt; 0.05: high-high or low-low when its own score and its neighbours' average are both above or both below the average, and an outlier when they differ.</span></li>
+<li><strong>Place types.</strong> SA2s were sorted by whether they are dense and whether they are diverse. Here "density" is a score made from the Intensity and Design pillars. It is not the count per square kilometre used for the individual indicators.
+<span class="formula">density score = (Intensity score + Design score) ÷ 2</span>
+<span class="formula">dense if density score ≥ 100 &nbsp;&nbsp; diverse if Diversity score ≥ 100</span>
+<span class="formula-note">These are the pillar scores shown on the page, where 100 is the Greater Sydney average. The chart in the place-type section draws its lines at the same 100.</span></li>
+<li><strong>Income.</strong> SA2s were grouped by median income to see who lives in the highest-scoring places.
+<span class="formula">share = residents in top-quintile SA2s of the group ÷ all residents of the group</span>
+<span class="formula-note">The three groups are cut at the points that put about a third of residents in each.</span></li>
+<li><strong>Walking counts.</strong> Scores were compared with real pedestrian counts for the 16 inner-city SA2s that have them. For each site we averaged the four most recent surveys (October 2024 to March 2026), then averaged the sites in each SA2.</li>
+</ul>
+</details>
+<p class="source">Source dates: 2021 to 2026, so the inputs are not all from the same year. Data credits: ABS, Transport for NSW, NSW Education, AEC, NSW Spatial Services, City of Sydney (walking counts, used only to check the score) and OpenStreetMap. Contains OpenStreetMap data (c) OpenStreetMap contributors.</p>
+</section>
+<section class="card" id="limitations">
+<p class="kicker">What are the limits?</p>
+<h2>Limitations: a rough guide to where street life is possible, not a count of people</h2>
+<p class="sub">Read this before using the ranking. It says what the score can and cannot tell you. The ideas that need a picture come first, then the limits in the data and in the methods, and a short glossary closes the section.</p>
+<div class="two-col">
+<div>
+<h3>What the score is good for</h3>
+<ul>
+<li>Spotting areas that have the ingredients for lively streets: homes, businesses, transport and a connected street network.</li>
+<li>Comparing parts of Greater Sydney with each other.</li>
+<li>Choosing where to look more closely.</li>
+</ul>
+</div>
+<div>
+<h3>What it cannot tell you</h3>
+<ul>
+<li>How many people are actually in an area at any time.</li>
+<li>An exact rank: the median SA2 moves {{MEDIAN_RANGE}} places when one choice in the method changes.</li>
+<li>Whether an area is a better place to live.</li>
+<li>Why an area scores the way it does. Nothing here shows cause.</li>
+</ul>
+</div>
+</div>
+<h3>We could only check the top of the ranking against real walking counts</h3>
+<p>Each square is one scored SA2, in rank order: rank 1 is the top left square and the last rank is the bottom right. The marked, high-contrast squares are the SA2s where the City of Sydney counts people walking. They all sit at the very start of the list, so we could not test whether the score works for the middle or the bottom. Where we could test, the link was weak (Spearman {{WEEKDAY_CORRELATION}} on weekdays and {{WEEKEND_CORRELATION}} on weekends, where 0 means no link and 1 means the same order).</p>
+{{COVERAGE_PICTURE}}
+<p class="source">{{COVERAGE_CAPTION}} Data: City of Sydney walking counts and this page's ranks.</p>
+<h3>Some clusters on the map could be due to chance</h3>
+<p>The cluster outlines come from a test run on each SA2 in turn. A test like this is set so that, when there is no real pattern, about 1 time in 20 it still looks special. Run it on every SA2 and about {{BY_CHANCE}} could look special by luck alone. The standard fix, called a false discovery rate correction, has not been applied here, so treat the clusters as a description of the map, not as proven hot spots or cold spots. Because neighbouring SA2s are not independent, {{BY_CHANCE}} is only a rough guide. In this run {{LABELLED_CLUSTERS}} SA2s were labelled, far more than {{BY_CHANCE}}, so many of the labels are probably real, but we cannot tell which ones.</p>
+{{CHANCE_PICTURE}}
+<p class="source">{{CHANCE_CAPTION}}</p>
+<h3>Limits in the data</h3>
+<ul id="limits-list" class="limits">{{LIMITS}}</ul>
+<h3>Limits in the methods</h3>
+<ul id="method-limits" class="limits">
+<li><strong>Equal weights are a choice.</strong> Intensity has ten indicators, while Diversity and Design have two each, so each Diversity or Design indicator counts for far more than each Intensity indicator. The 22 alternative versions and the weight sliders show how much the ranking depends on this, but none of them says which weights are right.</li>
+<li><strong>The score is relative.</strong> The scaling uses only the scored SA2s, so 100 means the Greater Sydney average. A score cannot be compared with another city or another year.</li>
+<li><strong>Areas are the unit.</strong> Counts are divided by the area of the whole SA2, so a large SA2 with a busy town inside it can still score low. A different boundary system could give different scores.</li>
+<li><strong>Missing pillars.</strong> An SA2 missing a pillar is scored on the pillars it has, so four SA2s without a Diversity pillar are not scored on exactly the same basis as the others.</li>
+<li><strong>The cluster labels are not corrected for testing many areas.</strong> An SA2 is labelled a cluster when its local Moran's I p-value is below 0.05. The test uses neighbours that share a border or corner, with 999 random shuffles per SA2, so the smallest p-value is 0.001. No false discovery rate (FDR) or Bonferroni correction is applied across the 372 tests, so about 19 tests would pass by chance alone. That figure is only a rough guide, because neighbouring tests are not independent. {{LABELLED_CLUSTERS}} SA2s passed, far more than 19, so many labels are probably real, but we cannot tell which ones.</li>
+<li><strong>The clusters are descriptive.</strong> They are not confirmed hot spots or cold spots. The global Moran's I of 0.55 says that nearby scores are alike, not why.</li>
+<li><strong>Place types use a sharp cut.</strong> An SA2 is dense or diverse when its score is at or above the Greater Sydney average, so SA2s close to that line can switch type with a small change.</li>
+<li><strong>The checks are modest.</strong> The 22 alternative versions change the choices one at a time. They do not give a confidence interval for any SA2's score. The walking-count check has only 16 SA2s, all in the top quintile, and the income comparison uses area medians, not households.</li>
+</ul>
+<p class="note">No claim here is causal. The score describes where conditions for street activity are present, and it does not explain why they are.</p>
+<details class="glossary" id="glossary">
+<summary>Glossary</summary>
+<dl>
+<dt>SA2</dt>
+<dd>A statistical area of the Australian Bureau of Statistics, usually a suburb or a few suburbs. Greater Sydney has 373.</dd>
+<dt>Proxy</dt>
+<dd>A stand-in. The score measures conditions that allow street activity, as a stand-in for activity itself.</dd>
+<dt>Indicator and pillar</dt>
+<dd>An indicator is one measure, such as transport stops per square kilometre. A pillar groups indicators: Intensity, Diversity and Design.</dd>
+<dt>Quintile</dt>
+<dd>One fifth of the ranked list. The top quintile is the highest-scoring fifth of SA2s.</dd>
+<dt>Standardised score</dt>
+<dd>A score rescaled so that 100 is the Greater Sydney average and 10 points is a typical spread (one standard deviation).</dd>
+<dt>Log transform</dt>
+<dd>A way of shrinking very large values, so that a few extreme areas do not swamp everyone else.</dd>
+<dt>Moran's I</dt>
+<dd>A number that says whether nearby areas have similar scores. Near 0 means no pattern, and closer to 1 means neighbours tend to look alike.</dd>
+<dt>Cluster, hot spot and cold spot</dt>
+<dd>A group of neighbouring SA2s with similar scores. A hot spot is high among high, and a cold spot is low among low.</dd>
+<dt>False discovery rate</dt>
+<dd>A correction for running many tests at once, which makes it harder for chance results to look real.</dd>
+<dt>Spearman correlation</dt>
+<dd>How closely two lists put things in the same order: 0 means no link and 1 means the same order.</dd>
+<dt>Density (place types)</dt>
+<dd>The average of an SA2's Intensity and Design scores. An SA2 is "dense" when this is at or above 100. It is a different idea from the counts per square kilometre used for the individual indicators.</dd>
+<dt>Baseline</dt>
+<dd>The main version of the score, built as described in How it was made, with equal pillar weights. The 22 alternative versions and the weight sliders are compared with it.</dd>
+<dt>High-high, low-low and outliers</dt>
+<dd>Labels for an SA2 and its neighbours. High-high means a high score among high-scoring neighbours, and low-low means a low score among low-scoring neighbours. A high-low or low-high outlier is an SA2 that differs from its neighbours.</dd>
+<dt>Median</dt>
+<dd>The middle value when everything is lined up from smallest to largest. Half the values are below it and half are above.</dd>
+<dt>Alternative versions</dt>
+<dd>The 22 ways of rebuilding the score with one choice changed, such as dropping an indicator, used to see how much the ranking depends on that choice.</dd>
+</dl>
+</details>
+</section>
+<section class="card" id="next-steps">
+<p class="kicker">What could come next?</p>
+<h2>Next steps: each one answers a limitation above</h2>
+<p class="sub">These are ideas to test, and we do not know yet whether they would change the ranking.</p>
+<ul id="next-steps-list" class="limits">
+<li><strong>Registered businesses are mostly home-based.</strong> Try shopfront or street-level data, for example from OpenStreetMap or council records, and see whether the ranking changes.</li>
+<li><strong>There are no jobs, floor-area or building-age data.</strong> Add workplace job counts and floor-area or building-age data where they exist for all of Greater Sydney.</li>
+<li><strong>The inputs come from different dates.</strong> Rebuild the index for one reference year, or refresh the sources together.</li>
+<li><strong>SA2s differ a lot in size.</strong> Repeat the score on a finer or more even set of areas, such as a grid or mesh blocks, to see how much the boundaries matter.</li>
+<li><strong>Walking counts exist only for the inner city.</strong> Collect or request counts from outer and middle-ranked areas, so the check also covers the middle and the bottom of the ranking.</li>
+<li><strong>Cluster labels are not corrected for many tests.</strong> Add a false discovery rate correction to the local Moran's I results and see which of the high-high and low-low SA2s remain.</li>
+<li><strong>Weights are equal by choice.</strong> Test weights set by experts, or weights learned from measured activity, and compare them with the equal-weight ranking.</li>
+<li><strong>Individual ranks are unstable.</strong> Report each SA2 as a rank range or a score band, not a single rank.</li>
+</ul>
 </section>
 <details class="table" id="table-view">
 <summary>Table view: {{SCORED_SA2S}} scored SA2s</summary>
@@ -945,10 +1348,12 @@
 </details>
 </main>
 <footer>
-<p>Vibrancy is a proxy for conditions that can support street activity. Use it to screen places, then follow up with local evidence.</p>
+<p>Vibrancy is a proxy for conditions that can support street activity. It does not measure how many people are on the street. Use it to screen places, then follow up with local evidence.</p>
+<p>The score is built from public data, and every step is explained in <a href="#methods">How it was made</a> above. The Limitations and Next steps sections say what it cannot tell you and what could improve it.</p>
 <p>
 </p>
 </footer>
+</div>
 </div><script id="story-data" type="application/json">{{DATA}}</script><script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script><script>
 
 
@@ -1680,8 +2085,8 @@ function profileHtml(properties) {
         '</span>',
         '<p class="profile-score">Score ' + formatScore(properties.score) + '</p>',
         weightsLine,
-        '<p class="profile-meta">Rank ' + properties.rank + ' of 372, ranks ' +
-            properties.rank_min + ' to ' + properties.rank_max + ' across the variants' + variantLine + '</p>',
+        '<p class="profile-meta">Rank ' + properties.rank + ' of 372 (1 is the highest). Across the 22 alternative versions of the score its rank runs from ' +
+            properties.rank_min + ' to ' + properties.rank_max + '.' + variantLine + '</p>',
         '<div class="axis-labels"><span>70</span><span>Greater Sydney average</span><span>130</span></div>',
         pillars,
         '<ul class="facts">' + facts + '</ul>',
@@ -1803,6 +2208,7 @@ document.querySelector('#theme').onchange = event => {
     applyThemeRamp();
     updateMap();
     drawCharts();
+    markPaleColourWords();
 };
 
 // Return scored SA2s in the current table sort order.
@@ -2020,7 +2426,7 @@ function rankingSummary(spearmanText, rankOf, classOf) {
     const keptTopQuintile = baselineTopQuintile.filter(feature => {
         return classOf(String(feature.properties.id)) === 4;
     }).length;
-    return 'Spearman correlation with the baseline ranking: ' + spearmanText + '. ' +
+    return 'Spearman correlation with the baseline ranking: ' + spearmanText + ' (1 means the same order). ' +
         keptTop25 + ' of the baseline’s top 25 stay in the top 25. ' +
         keptTopQuintile + ' of the baseline’s ' + baselineTopQuintile.length +
         ' top-quintile SA2s stay in the top quintile.';
@@ -2209,12 +2615,159 @@ document.querySelector('#try-what-if').onclick = () => {
     drawer.scrollIntoView({behavior: 'smooth'});
 };
 
+// Open a collapsed step when a link points at it or at something inside it, so the target is visible.
+function openStepForHash() {
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const step = target ? target.closest('details') : null;
+    if (step) {
+        step.open = true;
+        target.scrollIntoView();
+    }
+}
+window.addEventListener('hashchange', openStepForHash);
+openStepForHash();
+
+// Words that name a map colour are written in that colour.
+// Each row: the words to find (a regular expression), the CSS variable of the map colour, and whether the
+// capital letter matters (the pillar names count only when capitalised, so "design" in a sentence stays plain).
+const colourWordRows = [
+    {pattern: 'most vibrant quintile|top[- ]quintile', variable: '--c4'},
+    {pattern: 'second[- ]quintile', variable: '--c3'},
+    {pattern: 'middle[- ]quintile', variable: '--c2'},
+    {pattern: 'fourth[- ]quintile', variable: '--c1'},
+    {pattern: 'bottom[- ]quintile', variable: '--c0'},
+    // Place types use the text shade of the legend colour: the fill colours alone are too pale or too dark to read as letters.
+    {pattern: 'less dense and less diverse', variable: '--place-less-dense-less-diverse-text'},
+    {pattern: 'less dense and diverse', variable: '--place-less-dense-diverse-text'},
+    {pattern: 'dense and less diverse', variable: '--place-dense-less-diverse-text'},
+    {pattern: 'dense and diverse', variable: '--place-dense-diverse-text'},
+    {pattern: 'high-high|hot spots?', variable: '--cluster-high-high'},
+    {pattern: 'low-low|cold spots?', variable: '--cluster-low-low'},
+    {pattern: 'high-low', variable: '--cluster-high-low'},
+    {pattern: 'low-high', variable: '--cluster-low-high'},
+    {pattern: 'Intensity', variable: '--intensity-4', capitalised: true},
+    {pattern: 'Diversity', variable: '--diversity-4', capitalised: true},
+    {pattern: 'Design', variable: '--design-4', capitalised: true},
+];
+// Text inside these elements is left alone: it is already coloured, it is not page text, or (the table body) it
+// is a long column of data where a dot on every row would be clutter.
+const colourWordSkip = 'script,style,svg,button,option,select,label,textarea,.cw,.pillar-text,.type-chip,.type-name,.legend,.tooltip,.leaflet-container,#rows,#toc';
+// A colour whose contrast with the card is below this is almost invisible as letters, so the word stays in the
+// normal text colour and an underline in the map colour shows which colour it names. Only "less dense and
+// less diverse" is that pale; the lighter blues and pinks are kept as coloured letters.
+const paleWordContrast = 1.5;
+const colourWordPattern = new RegExp(colourWordRows.map(row => '\\b(' + row.pattern + ')\\b').join('|'), 'gi');
+
+// Return the row of colourWordRows that a matched piece of text belongs to, or undefined if it stays plain.
+function colourWordRow(matchedText) {
+    return colourWordRows.find(row => {
+        return new RegExp('^(' + row.pattern + ')$', row.capitalised ? '' : 'i').test(matchedText);
+    });
+}
+
+// Return the CSS variable for a matched word. A quintile word in the note above the map takes the colour of the
+// layer being shown, so on a pillar layer it matches that pillar's legend instead of the blue overall ramp.
+function colourVariableFor(row, node) {
+    const inMapNote = node.parentElement.closest('#focus-line');
+    if (inMapNote && currentLayer in pillarRamps && /^--c[0-4]$/.test(row.variable)) {
+        return '--' + currentLayer + '-' + row.variable.slice(3);
+    }
+    return row.variable;
+}
+
+// Give the letters of every coloured word the map colour, or the normal text colour when that colour is too pale.
+function markPaleColourWords() {
+    const surface = getComputedStyle(root).getPropertyValue('--surface').trim();
+    document.querySelectorAll('.cw').forEach(word => {
+        const colour = getComputedStyle(root).getPropertyValue(word.dataset.variable).trim();
+        word.classList.toggle('cw-pale', wcagContrast(colour, surface) < paleWordContrast);
+    });
+}
+
+// Wrap the colour words found in the text under one element.
+function colourWordsIn(parent) {
+    const walker = document.createTreeWalker(parent, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (!node.parentElement.closest(colourWordSkip) && node.nodeValue.search(colourWordPattern) !== -1) {
+            textNodes.push(node);
+        }
+    }
+    textNodes.forEach(node => {
+        const text = node.nodeValue;
+        const pieces = document.createDocumentFragment();
+        let last = 0;
+        for (const match of text.matchAll(colourWordPattern)) {
+            const row = colourWordRow(match[0]);
+            if (row) {
+                const word = document.createElement('span');
+                word.className = 'cw';
+                const variable = colourVariableFor(row, node);
+                word.dataset.variable = variable;
+                word.style.setProperty('--cw', 'var(' + variable + ')');
+                word.textContent = match[0];
+                pieces.append(text.slice(last, match.index), word);
+                last = match.index + match[0].length;
+            }
+        }
+        pieces.append(text.slice(last));
+        node.replaceWith(pieces);
+    });
+    markPaleColourWords();
+}
+
+// The contents list: always open beside the page on a wide screen, folded away on a narrow one, with the
+// link of the section being read marked.
+const tocDetails = document.querySelector('#toc details');
+const tocLinks = [...document.querySelectorAll('#toc a')];
+const tocSections = tocLinks.map(link => document.getElementById(link.getAttribute('href').slice(1)));
+const wideScreen = window.matchMedia('(min-width: 1100px)');
+const tocReadingLine = 0.3;
+
+function markCurrentSection() {
+    let current = 0;
+    tocSections.forEach((section, index) => {
+        if (section.getBoundingClientRect().top <= window.innerHeight * tocReadingLine) {
+            current = index;
+        }
+    });
+    tocLinks.forEach((link, index) => {
+        if (index === current) {
+            link.setAttribute('aria-current', 'true');
+        } else {
+            link.removeAttribute('aria-current');
+        }
+    });
+}
+
+function placeContents() {
+    tocDetails.open = wideScreen.matches;
+}
+wideScreen.addEventListener('change', placeContents);
+window.addEventListener('scroll', markCurrentSection, {passive: true});
+placeContents();
+markCurrentSection();
+
+// Colour the words already on the page, and the words added later (cards, summaries, table rows).
+let colourWordsQueued = false;
+new MutationObserver(() => {
+    if (!colourWordsQueued) {
+        colourWordsQueued = true;
+        requestAnimationFrame(() => {
+            colourWordsQueued = false;
+            colourWordsIn(document.body);
+        });
+    }
+}).observe(document.body, {childList: true, subtree: true, characterData: true});
+colourWordsIn(document.body);
+
 // The x and y axis title of every chart, kept in one list.
 const axisTitles = [
     ['distance-chart', 'Distance from the CBD (km)', 'Vibrancy score'],
     ['histogram-chart', 'Vibrancy score', 'SA2s in the bin'],
     ['intensity-design-chart', 'Intensity score', 'Design score'],
-    ['density-diversity-chart', 'Density score (mean of Intensity and Design)', 'Diversity score'],
+    ['density-diversity-chart', 'Density score (mean of the Intensity and Design scores)', 'Diversity score'],
     ['equity-chart', 'Median income group', "Share of the group's residents (%)"],
     ['stability-chart', 'Median range of ranks across the 22 checks (places)', 'Baseline rank quintile'],
     ['weekday-chart', 'Vibrancy score', 'Daily count, weekdays'],
@@ -2356,7 +2909,7 @@ function colourAxisTitle(label, title) {
     if (wholeTitleClasses[title]) {
         label.classList.add(wholeTitleClasses[title]);
     }
-    if (title === 'Density score (mean of Intensity and Design)') {
+    if (title === 'Density score (mean of the Intensity and Design scores)') {
         [...label.querySelectorAll('tspan')].forEach(line => {
             const pieces = line.textContent.split(/(Intensity|Design)/);
             line.textContent = '';
@@ -3157,13 +3710,13 @@ function drawFoot(day) {
 // below can call it by name, the same way drawCharts does).
 function drawIntensityDesignChart() {
     drawScatter('intensity-design-chart', 'intensity', 'design', 'Intensity and Design scores by SA2.',
-        'Spearman correlation: ' + data.correlations.intensity_design.toFixed(2) + '.');
+        'Spearman correlation: ' + data.correlations.intensity_design.toFixed(2) + ' (1 would mean the two pillars rank the SA2s in exactly the same order).');
 }
 
 // Draw the Density against Diversity scatter, the density-diversity-chart counterpart above.
 function drawDensityDiversityChart() {
     drawScatter('density-diversity-chart', 'density', 'diversity', 'Density and Diversity scores by SA2.',
-        'Spearman correlation: ' + data.correlations.density_diversity.toFixed(2) + '.');
+        'Spearman correlation: ' + data.correlations.density_diversity.toFixed(2) + ' (1 would mean the two rank the SA2s in exactly the same order).');
 }
 
 // The five charts where a quintile can be focused, independently, each replacing that one

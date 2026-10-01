@@ -179,13 +179,23 @@ def score_index(values, density_columns, intensity_columns, diversity_columns, d
     return scaled, pillars
 
 
-def classify_place_type(intensity_z, diversity_z, design_z):
-    """Label an SA2 by density and diversity, with missing Diversity as less diverse."""
-    if pd.isna(intensity_z) or pd.isna(design_z):
+# The cut between "less" and "more" for density and diversity: 100 is the Greater Sydney average on the scale of the
+# displayed scores, so the page's chart lines at 100 and this rule cut at the same place.
+PLACE_TYPE_CUTOFF = 100
+
+
+def classify_place_type(intensity_score, diversity_score, design_score):
+    """Label an SA2 by density and diversity from its displayed scores, with missing Diversity as less diverse.
+
+    Density is the mean of the Intensity and Design scores. An SA2 is dense, or diverse, when that score is at or
+    above PLACE_TYPE_CUTOFF.
+    """
+    if pd.isna(intensity_score) or pd.isna(design_score):
         return pd.NA
-    density_z = (float(intensity_z) + float(design_z)) / 2
-    density_label = "dense" if density_z >= 0 else "less dense"
-    diversity_label = "diverse" if pd.notna(diversity_z) and float(diversity_z) >= 0 else "less diverse"
+    density_score = (float(intensity_score) + float(design_score)) / 2
+    density_label = "dense" if density_score >= PLACE_TYPE_CUTOFF else "less dense"
+    diversity_is_high = pd.notna(diversity_score) and float(diversity_score) >= PLACE_TYPE_CUTOFF
+    diversity_label = "diverse" if diversity_is_high else "less diverse"
     return f"{density_label} and {diversity_label}"
 
 
