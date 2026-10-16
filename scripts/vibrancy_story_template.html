@@ -795,7 +795,7 @@
 </label>
 </div>
 <h1>{{TITLE}}</h1>
-<p class="dek">This page ranks the areas of Greater Sydney by how many of the conditions for lively street life they have: people living nearby, businesses, public transport, a mix of activities and a connected street network. We call the result a vibrancy score. It is a screening tool that points to places worth a closer look, and it does not count how many people are actually on the street.</p>
+<p class="dek">This page ranks the areas of Greater Sydney by how many of the conditions for lively street life they have: people living nearby, businesses, public transport, a mix of activities and a connected street network. We call the result a vibrancy score. It is a screening tool that points to places worth a closer look. It does not count how many people are on the street.</p>
 <p class="dek">We scored {{SCORED_SA2S}} of {{TOTAL_SA2S}} areas (called SA2s). The score is standardised, so 100 is the Greater Sydney average and 10 points is one standard deviation, a typical spread. If you rank every area and split the list into five equal groups, each group is a quintile. The top quintile takes up {{TOP_AREA}} of the land we scored, holds {{TOP_RESIDENTS}} of residents, and is concentrated around the inner city and major centres.</p>
 <div class="kpis">
 <div class="kpi">
@@ -824,21 +824,21 @@
 <section class="card" id="about">
 <p class="kicker">New here? Start with this</p>
 <h2>What this page shows</h2>
-<p class="sub">These are the ideas the page relies on. Every chart below also has a short "How to read it" note, and a glossary near the end explains the technical terms.</p>
+<p class="sub">Every chart has a short "How to read it" note, and a glossary near the end explains the technical terms.</p>
 <ul class="plain">
-<li><strong>Vibrancy.</strong> Here it means the conditions that make lively, varied and walkable street life possible: people living nearby, businesses and services, public transport, a mix of uses and a connected street network. It is a proxy, which means a stand-in. It is not a count of how busy the streets are.</li>
+<li><strong>Vibrancy.</strong> Here it means the conditions that make lively, varied and walkable street life possible: people living nearby, businesses and services, public transport, a mix of uses and a connected street network. It is a proxy, or stand-in, for street life, and it is not a count of how busy the streets are.</li>
 <li><strong>SA2.</strong> A statistical area drawn by the Australian Bureau of Statistics. An SA2 is usually a suburb or a few suburbs joined together, and Greater Sydney has {{TOTAL_SA2S}}. Some large outer SA2s are mostly bushland or farmland.</li>
-<li><strong>The score.</strong> For each SA2 we worked out 14 measures (called indicators), put them on a common scale, averaged them within three groups (called pillars) and then averaged the three pillars. A score of 100 is the Greater Sydney average, and 110 is one typical spread above it. The score only means something compared with other SA2s: it is not a percentage, and 100 is not a pass mark.</li>
+<li><strong>The score.</strong> For each SA2 we worked out 14 measures (called indicators), put them on a common scale, averaged them within three groups (called pillars) and then averaged the three pillars. A score of 100 is the Greater Sydney average, and 110 is one typical spread above it. The score only means something next to other SA2s. It is not a percentage, and 100 is not a pass mark.</li>
 <li><strong>The three pillars.</strong> <span class="pillar-text intensity-text">Intensity</span> is how much is packed into an area: residents, businesses, shops, stops and services for each square kilometre. <span class="pillar-text diversity-text">Diversity</span> is how varied the mix of businesses and land uses is. <span class="pillar-text design-text">Design</span> is how connected and easy to cross the streets are, using street intersections and pedestrian crossings.</li>
 <li><strong>Rank and quintile.</strong> Rank 1 is the highest-scoring SA2 and rank {{SCORED_SA2S}} is the lowest. A quintile is one fifth of the ranked list, so the top quintile is the highest-scoring fifth.</li>
-<li><strong>How to use the page.</strong> Start with the map: click any area to open its card, or use the buttons to switch what the map shows. Each chart below it asks one question and gives the answer in its heading. <a href="#methods">How it was made</a> explains how the score was built, Limitations says what it cannot tell you, Next steps says what could improve it, and a table at the bottom lets you sort every score and download it.</li>
+<li><strong>How to use the page.</strong> Start with the map: click any area to open its card, or use the buttons to change what the map shows. Each chart below it asks one question and answers it in the heading. Further down, <a href="#methods">How it was made</a> explains how the score was built, Limitations says what it cannot tell you, and Next steps lists ways to improve it. The table at the bottom can be sorted and downloaded.</li>
 </ul>
-<p class="note">Please read the Limitations section before using the ranking for any decision. In short, the score describes conditions, not crowds, and individual ranks move when the method changes.</p>
+<p class="note">Please read the Limitations section before using the ranking for any decision. In short, the score describes conditions, not crowds, and individual ranks shift when the method changes.</p>
 </section>
 <section class="card" id="where">
 <p class="kicker">Where is it most vibrant?</p>
 <h2>Vibrancy is highest in the inner city, and big centres like Parramatta and Liverpool stand out</h2>
-<p class="sub">The map shades every SA2 by its quintile: the darker the colour, the higher the SA2 sits in the ranking. Nearby SA2s often have similar scores (global Moran’s I {{GLOBAL_I}}, p = {{GLOBAL_P}}), so high-scoring areas tend to sit together instead of being scattered. The p-value comes from 999 random shuffles of the scores, so the smallest value it can show is 0.001.</p>
+<p class="sub">The map shades every SA2 by its quintile: the darker the colour, the higher the SA2 sits in the ranking. Nearby SA2s often have similar scores (global Moran's I {{GLOBAL_I}}, p = {{GLOBAL_P}}), so high-scoring areas tend to sit together. The p-value comes from 999 random shuffles of the scores, so the smallest value it can show is 0.001.</p>
 <p class="how">
 <strong>How to read it:</strong> Colours show quintiles of the ranking, and the legend gives each quintile's score range. {{SCORE_MIDDLE_SHARE}} of SA2s score between 90 and 110, so most places are close to the average and the gaps between neighbouring ranks are often small. Click or tap an area to open its card, or type a name in the search box. The buttons above the map change what it shows:</p>
 <ul class="plain">
@@ -889,7 +889,7 @@
 <p class="source">Data: ABS SA2 boundaries (2021) and the fourteen indicators behind this score, from ABS, Transport for NSW, NSW Education, AEC, NSW Spatial Services, City of Sydney and OpenStreetMap (full list in <a href="#indicators">How it was made</a>). Covers every map layer: Overall score, the three pillars, Place types and Hot spots.</p>
 <details class="drawer" id="what-if">
 <summary>What if the pillars counted differently?</summary>
-<p class="how">The overall score gives Intensity, Diversity and Design the same weight. That is a choice, not a fact, so you can change it here. Drag a slider to make a pillar count for more or less, or pick a preset, and watch the map and the ranks move. This is a way to see how much the ranking depends on that choice, and there is no single right answer. Weights affect the Overall score only. The pillar layers, place types and hot spots stay as they are in the baseline, which is the main version of the score with equal weights.</p>
+<p class="how">The overall score gives Intensity, Diversity and Design the same weight. That is a choice, and you can change it here. Drag a slider to make a pillar count for more or less, or pick a preset, and watch the map and the ranks move. It shows how much the ranking depends on equal weights, and no set of weights is the right one. Weights change the Overall score only. The pillar layers, place types and hot spots stay as they are in the baseline, the main version of the score with equal weights.</p>
 <div class="drawer-grid">
 <label class="intensity" data-pillar="intensity">Intensity <b id="intensity-pct">33%</b>
 <input id="weight-intensity" type="range" min="0" max="100" step="5" value="50">
@@ -928,8 +928,8 @@
 <button class="chip quintile-focus-button quintile-0" data-chart="distance-chart" data-quintile="0" aria-pressed="false"><i class="layer-dot"></i>Bottom quintile</button>
 <button class="chip quintile-focus-clear" data-chart="distance-chart" aria-pressed="true">Show all</button>
 </div>
-<p id="distance-chart-focus-state" class="state">Showing: baseline</p>
-<p class="how"><strong>How to read it:</strong> Each dot is one SA2. It sits in a column for its straight-line distance from the Sydney GPO, which stands in for the city centre, and its height is its score. The named dots are examples. Use the quintile buttons to see where the SA2s of one quintile sit.</p>
+<p id="distance-chart-focus-state" class="state">Showing: all quintiles</p>
+<p class="how"><strong>How to read it:</strong> Each dot is one SA2. It sits in a column for its straight-line distance from the Sydney GPO, which stands in for the city centre, and its height is its score. Dots take the colour of their quintile, as on the map, and the named dots are the three highest-scoring SA2s beyond 10 km. A quintile button keeps that quintile in colour and fades the rest, and Show all brings every colour back.</p>
 <div id="distance-chart" class="chart" aria-label="Vibrancy score by distance group">
 </div>
 <p id="distance-axis-note" class="note">
@@ -965,7 +965,7 @@
 <h2>Dense places usually have fine-grained streets too: Intensity and Design rise together, Diversity does not</h2>
 <p class="sub">Intensity is how much is packed into an SA2, Design is how connected its streets are, and Diversity is how varied its mix of businesses and land uses is. The three pillars are shown on the same score scale, centred on 100, but each has its own quintiles on the map.</p>
 <p class="how">
-<strong>How to read it:</strong> Use a button to show one pillar on the main map. In the charts below, each dot is one SA2. The caption under each chart gives a Spearman correlation, a number from -1 to 1 for how closely two rankings agree: 0 means no link, and 1 means they put the SA2s in exactly the same order.</p>
+<strong>How to read it:</strong> Use a button to show one pillar on the main map. In the charts below, each dot is one SA2, coloured by its quintile, and the three highest-scoring SA2s of each quintile are named. The quintile buttons above a chart keep one quintile in colour and name only its three. The caption under each chart gives a Spearman correlation, a number from -1 to 1 for how closely two rankings agree: 0 means no link, and 1 means they put the SA2s in exactly the same order.</p>
 <div class="chips">
 <button class="chip jump-layer pillar-button intensity" data-layer="intensity"><i class="layer-dot"></i>Show Intensity on the map</button>
 <button class="chip jump-layer pillar-button diversity" data-layer="diversity"><i class="layer-dot"></i>Show Diversity on the map</button>
@@ -980,7 +980,7 @@
 <button class="chip quintile-focus-button quintile-0" data-chart="intensity-design-chart" data-quintile="0" aria-pressed="false"><i class="layer-dot"></i>Bottom quintile</button>
 <button class="chip quintile-focus-clear" data-chart="intensity-design-chart" aria-pressed="true">Show all</button>
 </div>
-<p id="intensity-design-chart-focus-state" class="state">Showing: baseline</p>
+<p id="intensity-design-chart-focus-state" class="state">Showing: all quintiles</p>
 <div id="intensity-design-chart" class="chart" aria-label="Intensity and Design comparison">
 </div>
 <p id="intensity-design-chart-caption" class="note">
@@ -996,7 +996,7 @@
 <button class="chip quintile-focus-button quintile-0" data-chart="density-diversity-chart" data-quintile="0" aria-pressed="false"><i class="layer-dot"></i>Bottom quintile</button>
 <button class="chip quintile-focus-clear" data-chart="density-diversity-chart" aria-pressed="true">Show all</button>
 </div>
-<p id="density-diversity-chart-focus-state" class="state">Showing: baseline</p>
+<p id="density-diversity-chart-focus-state" class="state">Showing: all quintiles</p>
 <div id="density-diversity-chart" class="chart" aria-label="Density and Diversity comparison">
 </div>
 <p id="density-diversity-chart-caption" class="note">
@@ -1064,7 +1064,7 @@
 <button class="chip quintile-focus-button quintile-4" data-chart="weekday-chart" data-quintile="4" aria-pressed="false"><i class="layer-dot"></i>Top quintile</button>
 <button class="chip quintile-focus-clear" data-chart="weekday-chart" aria-pressed="true">Show all</button>
 </div>
-<p id="weekday-chart-focus-state" class="state">Showing: baseline</p>
+<p id="weekday-chart-focus-state" class="state">Showing: all quintiles</p>
 <div id="weekday-chart" class="chart" aria-label="Weekday walking counts and vibrancy score">
 </div>
 <p class="source">Data: City of Sydney weekday pedestrian counts (16 inner-city SA2s only) and this page's vibrancy score.</p>
@@ -1076,7 +1076,7 @@
 <button class="chip quintile-focus-button quintile-4" data-chart="weekend-chart" data-quintile="4" aria-pressed="false"><i class="layer-dot"></i>Top quintile</button>
 <button class="chip quintile-focus-clear" data-chart="weekend-chart" aria-pressed="true">Show all</button>
 </div>
-<p id="weekend-chart-focus-state" class="state">Showing: baseline</p>
+<p id="weekend-chart-focus-state" class="state">Showing: all quintiles</p>
 <div id="weekend-chart" class="chart" aria-label="Weekend walking counts and vibrancy score">
 </div>
 <p class="source">Data: City of Sydney weekend pedestrian counts (16 inner-city SA2s only) and this page's vibrancy score.</p>
@@ -1107,7 +1107,7 @@
 <li><strong>Density score (step 4): used to describe the results.</strong> The average of the finished Intensity and Design scores. It is worked out after the score exists, only to sort SA2s into dense or less dense for the place types and the chart. It is not an input to the score, and it does not change any score or rank.</li>
 </ul>
 </div>
-<p class="note">Open any step below for the detail. The limits of these methods are listed in the Limitations section after it.</p>
+<p class="note">Open any step for the detail. The limits of these methods are in the Limitations section.</p>
 <details class="step" id="etl">
 <summary>1. Prepare and check the data<span>15 public sources cleaned, checked and placed into SA2s</span></summary>
 <ul class="plain">
@@ -1204,7 +1204,7 @@
 <section class="card" id="limitations">
 <p class="kicker">What are the limits?</p>
 <h2>Limitations: a rough guide to where street life is possible, not a count of people</h2>
-<p class="sub">Read this before using the ranking. It says what the score can and cannot tell you. The ideas that need a picture come first, then the limits in the data and in the methods, and a short glossary closes the section.</p>
+<p class="sub">Read this before using the ranking. Two limits that are easier to see than to describe come first, then the limits in the data and in the methods, and a short glossary.</p>
 <div class="two-col">
 <div>
 <h3>What the score is good for</h3>
@@ -1349,7 +1349,7 @@
 </main>
 <footer>
 <p>Vibrancy is a proxy for conditions that can support street activity. It does not measure how many people are on the street. Use it to screen places, then follow up with local evidence.</p>
-<p>The score is built from public data, and every step is explained in <a href="#methods">How it was made</a> above. The Limitations and Next steps sections say what it cannot tell you and what could improve it.</p>
+<p>The score is built from public data, and <a href="#methods">How it was made</a> explains every step. Limitations says what it cannot tell you, and Next steps says what could improve it.</p>
 <p>
 </p>
 </footer>
@@ -3110,13 +3110,13 @@ function chooseDistanceLabels(chart, groups, slot) {
 
 // Draw the dots of one distance group, faded except for the outer exceptions labelled below.
 // A score below the axis sits on the axis line.
-function drawDistanceDots(chart, frame, group, centreX, dotBoxes, outerDots, fade) {
+function drawDistanceDots(chart, frame, group, centreX, dotBoxes, outerDots) {
     group.values.forEach((feature, pointIndex) => {
         const properties = feature.properties;
         const x = centreX + ((pointIndex % 9) - 4) * 5;
         const y = scale(Math.max(properties.score, 70), 70, 130, frame.bottom, frame.top);
         const dot = svg('circle', {
-            cx: x, cy: y, r: 3.5, fill: fade, class: 'dot'
+            cx: x, cy: y, r: 3.5, fill: ramp[properties.rank_class], class: 'dot'
         });
         mark(chart, dot, properties.id, '<b>' + properties.name + '</b><br>Score ' +
             formatScore(properties.score) + ', rank ' + properties.rank);
@@ -3165,7 +3165,6 @@ function placeAverageLabel(chart, frame, lineY, dotBoxes) {
 function drawDistance() {
     const chart = setupChart('distance-chart', 'Scores by five distance groups.');
     const titles = titlesOf('distance-chart');
-    const fade = mapFade();
     const scoreTicks = [70, 85, 100, 115, 130];
     const widest = Math.max(...scoreTicks.map(value => chartTextWidth(chart.s, String(value))));
     const left = Math.ceil(widest) + 14;
@@ -3189,7 +3188,7 @@ function drawDistance() {
     const outerDots = [];
     groups.forEach((group, index) => {
         const centreX = left + slot * (index + 0.5);
-        drawDistanceDots(chart, frame, group, centreX, dotBoxes, outerDots, fade);
+        drawDistanceDots(chart, frame, group, centreX, dotBoxes, outerDots);
         chart.s.append(svg('line', {
             x1: centreX - 16, x2: centreX + 16, y1: scoreY(group.median), y2: scoreY(group.median), class: 'ref'
         }));
@@ -3205,7 +3204,6 @@ function drawDistance() {
     const candidates = outerDots.sort((first, second) => second.score - first.score).slice(0, 3);
     const labelled = placeLabels(chart, frame, candidates, occupied);
     labelled.forEach(dot => {
-        dot.element.setAttribute('fill', ramp[dot.rankClass]);
         dot.element.dataset.labelled = 'true';
     });
     showBelowAxisNote(scored.filter(feature => feature.properties.score < 70).length);
@@ -3280,13 +3278,31 @@ function paddedScoreRange(values) {
     return [lower, upper];
 }
 
-// Draw a titled score-scale scatterplot with data-driven axes. Every dot fades to the shared colour
-// except the four SA2s already used as the panel-4 example place cards, which keep their true
-// quintile colour and get a name label (reusing placeLabels), tying the chart back to the cards.
+// Return the names this scatterplot writes beside dots: the three highest-scoring SA2s of each quintile
+// (or of the focused quintile only), plus the four example place-card SA2s that sit in those quintiles,
+// with the examples first so they get the best label positions.
+function namedScatterDots(values, focus) {
+    const names = data.card_names.filter(name => {
+        const feature = values.find(item => item.properties.name === name);
+        return feature && (focus === null || feature.properties.rank_class === focus);
+    });
+    [4, 3, 2, 1, 0].forEach(quintile => {
+        if (focus !== null && quintile !== focus) return;
+        values.filter(feature => feature.properties.rank_class === quintile)
+            .sort((first, second) => second.properties.score - first.properties.score)
+            .slice(0, 3)
+            .forEach(feature => {
+                if (!names.includes(feature.properties.name)) names.push(feature.properties.name);
+            });
+    });
+    return names;
+}
+
+// Draw a titled score-scale scatterplot with data-driven axes. Every dot takes its own quintile colour, and
+// the SA2s from namedScatterDots get a name label (reusing placeLabels), tying the chart back to the cards.
 function drawScatter(id, xKey, yKey, summary, caption) {
     const chart = setupChart(id, summary);
     const titles = titlesOf(id);
-    const fade = mapFade();
     const values = scored.filter(feature => feature.properties[xKey] !== null &&
         feature.properties[yKey] !== null);
     const xRange = paddedScoreRange(values.map(feature => feature.properties[xKey]));
@@ -3336,15 +3352,16 @@ function drawScatter(id, xKey, yKey, summary, caption) {
             addChartLines(chart.s, corner.x, baseline, lines, corner.anchor, className);
         });
     }
+    const named = namedScatterDots(values, quintileFocus[id]);
     const examples = [];
     values.forEach(feature => {
         const properties = feature.properties;
         if (properties[yKey] < yRange[0] || properties[yKey] > yRange[1]) return;
-        const isExample = data.card_names.includes(properties.name);
+        const isExample = named.includes(properties.name);
         const x = scale(properties[xKey], xRange[0], xRange[1], frame.left, frame.right);
         const y = scale(properties[yKey], yRange[0], yRange[1], frame.bottom, frame.top);
         const dot = svg('circle', {
-            cx: x, cy: y, r: 3.5, fill: isExample ? ramp[properties.rank_class] : fade, class: 'dot',
+            cx: x, cy: y, r: 3.5, fill: ramp[properties.rank_class], class: 'dot',
         });
         mark(chart, dot, properties.id, '<b>' + properties.name + '</b><br>' +
             xKey.replace('_', ' ') + ' ' + formatScore(properties[xKey]) + '<br>' +
@@ -3355,6 +3372,7 @@ function drawScatter(id, xKey, yKey, summary, caption) {
         }
     });
     const occupied = [...chart.s.querySelectorAll('text')].map(label => label.getBBox());
+    examples.sort((first, second) => named.indexOf(first.name) - named.indexOf(second.name));
     placeLabels(chart, frame, examples, occupied);
     document.querySelector('#' + id + '-caption').textContent = caption;
     if (id === 'density-diversity-chart') {
@@ -3628,6 +3646,10 @@ function tryLabel(chart, frame, dot, lines, placed) {
         [-8, 22, 'end'],
         [8, -30, 'start'],
         [-8, -30, 'end'],
+        [8, 34, 'start'],
+        [-8, 34, 'end'],
+        [8, -42, 'start'],
+        [-8, -42, 'end'],
     ];
     for (const [offsetX, offsetY, anchor] of candidates) {
         const label = addChartLines(chart.s, dot.x + offsetX, dot.y + offsetY, lines, anchor, 'tick halo');
@@ -3663,12 +3685,11 @@ function placeLabels(chart, frame, dots, occupied = []) {
 }
 
 // Draw one titled foot-traffic scatterplot with a zoomed score axis.
-// Draw one walking-count scatter, faded except the top three by count, which keep their true
-// quintile colour and a name label (reusing placeLabels), the same pattern as the distance chart.
+// Draw one walking-count scatter: every dot in its own quintile colour, and the top three by count
+// get a name label (reusing placeLabels), the same pattern as the distance chart.
 function drawFoot(day) {
     const chart = setupChart(day + '-chart', day + ' average walking counts and score.');
     const titles = titlesOf(day + '-chart');
-    const fade = mapFade();
     const items = data.foot_sites.filter(item => numberValue(item[day + '_average']) !== null);
     const scores = items.map(item => byCode.get(String(item.sa2_code)).properties.score);
     const xRange = paddedScoreRange(scores);
@@ -3688,7 +3709,7 @@ function drawFoot(day) {
         const x = scale(properties.score, xRange[0], xRange[1], frame.left, frame.right);
         const y = scale(item[day + '_average'], 0, maximum, frame.bottom, frame.top);
         const dot = svg('circle', {
-            cx: x, cy: y, r: 4, fill: fade, class: 'dot'
+            cx: x, cy: y, r: 4, fill: ramp[properties.rank_class], class: 'dot'
         });
         mark(chart, dot, properties.id, '<b>' + properties.name + '</b><br>' +
             formatWhole(item[day + '_average']) + ' ' + day + ' count<br>Score ' +
@@ -3702,7 +3723,6 @@ function drawFoot(day) {
     const topDots = candidates.sort((first, second) => second.count - first.count).slice(0, 3);
     const labelled = placeLabels(chart, frame, topDots, occupied);
     labelled.forEach(dot => {
-        dot.element.setAttribute('fill', ramp[dot.rankClass]);
         dot.element.dataset.labelled = 'true';
     });
 }
@@ -3719,8 +3739,8 @@ function drawDensityDiversityChart() {
         'Spearman correlation: ' + data.correlations.density_diversity.toFixed(2) + ' (1 would mean the two rank the SA2s in exactly the same order).');
 }
 
-// The five charts where a quintile can be focused, independently, each replacing that one
-// chart's usual named-highlight default while focused. Mapped to the function that redraws it.
+// The five charts where a quintile can be focused, independently. With no focus, every dot shows its
+// own quintile colour. Mapped to the function that redraws the chart.
 const quintileFocusDraw = {
     'distance-chart': drawDistance,
     'intensity-design-chart': drawIntensityDesignChart,
@@ -3734,18 +3754,15 @@ const quintileFocusLabels = [
 const quintileFocus = {};
 Object.keys(quintileFocusDraw).forEach(chartId => { quintileFocus[chartId] = null; });
 
-// Recolour one quintile-focus chart's own dots to its own focus (true colour for the focused
-// quintile, mapFade() for the rest), or leave the redraw's usual named-highlight colours
-// untouched when that chart has no quintile focused.
+// Recolour one quintile-focus chart's own dots: every dot in its own quintile colour when no
+// quintile is focused ("Show all"), or the focused quintile in colour and the rest in mapFade().
 function applyQuintileFocus(chartId) {
     const focus = quintileFocus[chartId];
-    if (focus === null) {
-        return;
-    }
     const fade = mapFade();
     document.querySelectorAll('#' + chartId + ' circle.dot[data-code]').forEach(dot => {
         const properties = byCode.get(dot.dataset.code).properties;
-        dot.setAttribute('fill', properties.rank_class === focus ? ramp[focus] : fade);
+        const inFocus = focus === null || properties.rank_class === focus;
+        dot.setAttribute('fill', inFocus ? ramp[properties.rank_class] : fade);
     });
 }
 
@@ -3765,7 +3782,7 @@ function updateQuintileFocusUi(chartId) {
     document.querySelector('.quintile-focus-clear[data-chart="' + chartId + '"]')
         .setAttribute('aria-pressed', String(focus === null));
     document.querySelector('#' + chartId + '-focus-state').textContent =
-        'Showing: ' + (focus === null ? 'baseline' : quintileFocusLabels[focus]);
+        'Showing: ' + (focus === null ? 'all quintiles' : quintileFocusLabels[focus]);
 }
 
 // Set one chart's quintile focus without affecting any other chart's focus. Passing the

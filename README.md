@@ -5,7 +5,7 @@ ranking be trusted? This project builds a vibrancy index for the 373 Greater Syd
 public data, and tells the result as a data story.
 
 The index is a proxy. It measures the conditions that allow street activity, from open data on businesses, residents,
-transport, streets and land use. It does not measure how many people are actually there.
+transport, streets and land use. It does not measure how many people are there.
 
 ## Overview
 
@@ -28,8 +28,8 @@ built too. The downloader, the ETL and the index functions have tests in this re
 
 ## Results
 
-The numbers below come from the saved results and the built page. They are screening results for the conditions that
-allow street activity, not measurements of how busy places are.
+The numbers below come from the saved results and the built page. They describe conditions for street activity, not how
+busy places are.
 
 <img src="vibrancy/images/vibrancy_map.png" alt="Two maps of Greater Sydney SA2s coloured by quintile of the vibrancy ranking: the whole region on the left and the built-up area on the right. The darkest, most vibrant quintile is packed into the inner city, and the large outer SA2s are in the lowest quintile. Thin outlines mark clusters of similar scores." width="830">
 
@@ -60,8 +60,8 @@ outlines.*
   1 to 29 of 372. The scores and the counts are at best weakly related (Spearman correlation 0.31 for weekday counts and 0.17
   for weekend counts). So the check can only test the ordering among the busiest places, and it is weak evidence.
 - **The limits.** The index is a proxy for conditions that can support street activity, not a measure of how busy places
-  are, and it uses registered businesses, which are mostly home-based. The page has a Limitations section, with pictures,
-  in plain language. In short: the check against real walking counts only covers the top of the ranking; the cluster labels
+  are, and it uses registered businesses, which are mostly home-based. The page has a Limitations section, with pictures.
+  In short: the check against real walking counts only covers the top of the ranking; the cluster labels
   are not corrected for running many tests (about 19 of the 372 tests could look special by chance alone, as a rough guide);
   the pillars have equal weights by choice, with Intensity covering ten indicators and Diversity and Design two each; the
   inputs come from different years (2021 to 2026); and SA2s differ a lot in size. None of this shows cause.

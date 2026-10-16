@@ -6,6 +6,7 @@ import html
 import json
 import math
 import random
+import textwrap
 from pathlib import Path
 
 import geopandas as gpd
@@ -86,6 +87,21 @@ HOTSPOT_STYLES = {
     "high-low": {"weight": 1.2, "dash": "2 2"},
     "low-high": {"weight": 1.2, "dash": "7 2 2 2"},
 }
+# The static chart figures. The score axes run from 70 to 130 on the page, so they do too here.
+GUIDE_COLOR = "#c3c2b7"
+DOT_SIZE = 16
+DOT_SEED = 20261017
+TITLE_WIDTH = 90
+SCORE_AXIS_LOW = 70
+SCORE_AXIS_HIGH = 130
+MORAN_AXIS_LOW = 60
+HISTOGRAM_BIN = 2
+DISTANCE_BANDS = [
+    (0, 5, "Within 5 km"), (5, 10, "5 to 10 km"), (10, 20, "10 to 20 km"), (20, 40, "20 to 40 km"),
+    (40, np.inf, "Over 40 km"),
+]
+# Where a dot's name may sit beside it, tried in order: right and above, left and above, right and below, left and below.
+LABEL_OFFSETS = [(6, 6, "left", "bottom"), (-6, 6, "right", "bottom"), (6, -6, "left", "top"), (-6, -6, "right", "top")]
 # The squares picture in the Limitations section: how many squares per row, the pixels from one square to the next,
 # and the size of a square. The chance picture uses the usual 0.05 cut-off for a "significant" local Moran's I test.
 GRID_COLUMNS = 31
@@ -326,7 +342,7 @@ def moran_card_text(regions, global_i):
     )
     paragraphs = [
         "Moran's I asks whether neighbouring SA2s look alike. A value of 0 means no pattern and 1 means neighbours look "
-        f"exactly alike; here it is {global_i:.2f}, so nearby SA2s often score alike. This does not tell us why.",
+        f"exactly alike; here it is {global_i:.2f}, so nearby SA2s often score alike, though that does not say why.",
         f"Of the {len(scored)} scored SA2s, {counts['high-high']} are high-high (a high score with high-scoring "
         f"neighbours) and {counts['low-low']} are low-low (a low score with low-scoring neighbours). "
         f"{outliers} The other {counts['not significant']} are not clusters.".replace("  ", " "),
@@ -467,8 +483,8 @@ def build_cards(regions):
             pillars.append({"label": label, "value": value, "clipped": clipped})
         texts = {
             "Darlinghurst": (
-                "Its high Intensity and Design bars sit with above-average Diversity, making it a "
-                "dense and varied example. The rank range shows that it remains near the top "
+                "Its Intensity and Design bars are high and its Diversity bar is above average, so it is both "
+                "dense and varied. The rank range shows that it stays near the top "
                 "when the method changes."
             ),
             "Sydney (South) - Haymarket": (
@@ -478,8 +494,8 @@ def build_cards(regions):
             ),
             "Gosford - Springfield": (
                 "It has high Diversity without the same concentration of places as the leading "
-                "inner-city SA2s. Its wide rank range makes the type clearer than a precise "
-                "middle-table position."
+                "inner-city SA2s. Its rank range is wide, so its place type says more about it than "
+                "a single middle-table rank does."
             ),
             "Wetherill Park Industrial": (
                 f'It has {int(row["businesses"]):,} registered businesses but only '
@@ -587,12 +603,23 @@ def squares_svg(total, highlighted, description):
             f'aria-label="{html.escape(description)}">' + "".join(squares) + "</svg>")
 
 
+def walking_count_positions(foot_sites):
+    """Return the square positions (rank minus one) of the SA2s that have walking counts."""
+    return {int(rank) - 1 for rank in foot_sites["vibrancy_rank"].dropna()}
+
+
+def chance_positions(scored_sa2s):
+    """Return the square positions marked in the chance picture, the same ones on every build."""
+    by_chance = round(CHANCE_LEVEL * scored_sa2s)
+    return set(random.Random(CHANCE_SEED).sample(range(scored_sa2s), by_chance))
+
+
 def walking_count_squares(scored_sa2s, foot_sites):
     """Return the picture and its caption for the SA2s that have walking counts, shown among all scored SA2s in rank order."""
     ranks = sorted(int(rank) for rank in foot_sites["vibrancy_rank"].dropna())
     if not ranks:
         return squares_svg(scored_sa2s, set(), "No SA2s have walking counts."), "No SA2s have walking counts."
-    highlighted = {rank - 1 for rank in ranks}
+    highlighted = walking_count_positions(foot_sites)
     description = (f"{len(ranks)} of {scored_sa2s} scored SA2s have walking counts. "
                    f"All of them are ranked {ranks[0]} to {ranks[-1]}.")
     caption = (f"{len(ranks)} of the {scored_sa2s} scored SA2s have walking counts, and all of them rank "
@@ -603,7 +630,7 @@ def walking_count_squares(scored_sa2s, foot_sites):
 def chance_squares(scored_sa2s):
     """Return the picture and its caption for how many tests pass by chance alone, with squares placed at random."""
     by_chance = round(CHANCE_LEVEL * scored_sa2s)
-    highlighted = set(random.Random(CHANCE_SEED).sample(range(scored_sa2s), by_chance))
+    highlighted = chance_positions(scored_sa2s)
     description = f"{by_chance} of {scored_sa2s} squares are marked, placed at random."
     caption = (f"Illustration only: {scored_sa2s} squares for {scored_sa2s} tests, with {by_chance} marked at "
                f"random. The squares are not real SA2s.")
@@ -1007,6 +1034,363 @@ def figure_rank_ranges(stats, out_dir):
     quiet_axes(axis)
     fig.tight_layout()
     return save_figure(fig, out_dir, "vibrancy_rank_ranges.png")
+
+
+def padded_score_range(values):
+    """Round a range of scores out to the nearest ten, with a margin of four, like the page's axes."""
+    lower = math.floor((min(values) - 4) / 10) * 10
+    upper = math.ceil((max(values) + 4) / 10) * 10
+    return lower, upper
+
+
+def chart_axes(axis, vertical_grid=False):
+    """Apply the quiet axes, with the x tick labels set lower so they clear the y tick label at the corner."""
+    quiet_axes(axis)
+    axis.tick_params(axis="x", pad=8)
+    if vertical_grid:
+        axis.grid(axis="x", color="#e1e0d9", linewidth=0.8)
+
+
+def sa2_count(count):
+    """Return "1 SA2" or "5 SA2s"."""
+    return f"{count} SA2" if count == 1 else f"{count} SA2s"
+
+
+def add_note(fig, note):
+    """Write a small note along the bottom of a figure."""
+    fig.text(0.01, 0.01, textwrap.fill(note, 130), fontsize=8, color="#52514e", va="bottom")
+
+
+def label_dots(fig, axis, dots):
+    """Write each dot's name beside it, at the first corner where it overlaps no other text and stays inside the axes.
+
+    `dots` is a list of (x, y, name) in data coordinates. A name with no free corner is left out, as on the page.
+    """
+    from matplotlib import patheffects
+    halo = [patheffects.withStroke(linewidth=2.5, foreground="white")]
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    axes_box = axis.get_window_extent(renderer)
+    taken = [text.get_window_extent(renderer) for text in axis.texts]
+    for x, y, name in dots:
+        for x_offset, y_offset, horizontal, vertical in LABEL_OFFSETS:
+            label = axis.annotate(name, (x, y), xytext=(x_offset, y_offset), textcoords="offset points",
+                                  ha=horizontal, va=vertical, fontsize=8, path_effects=halo)
+            box = label.get_window_extent(renderer)
+            inside = axes_box.contains(box.x0, box.y0) and axes_box.contains(box.x1, box.y1)
+            if inside and not any(box.overlaps(other) for other in taken):
+                taken.append(box)
+                break
+            label.remove()
+
+
+def figure_distance(regions, stats, out_dir):
+    """Save the distance chart: one column of dots per distance group, with the group median and three named centres."""
+    import matplotlib.pyplot as plt
+    scored = regions[regions["scored"] == True]
+    named = set(distance_outer_exceptions(scored)["sa2_name"])
+    rng = np.random.default_rng(DOT_SEED)
+    fig, axis = plt.subplots(figsize=(10, 5.6), dpi=180)
+    names = []
+    tick_labels = []
+    for position, (low, high, band_name) in enumerate(DISTANCE_BANDS):
+        band = scored[(scored["distance_km"] >= low) & (scored["distance_km"] < high)]
+        if band.empty:
+            tick_labels.append(f"{band_name}\nn = 0")
+            continue
+        across = position + rng.uniform(-0.3, 0.3, len(band))
+        up = band["vibrancy_score"].clip(lower=SCORE_AXIS_LOW)
+        axis.scatter(across, up, s=DOT_SIZE, color=[RAMP[int(value)] for value in band["rank_class"]], linewidths=0)
+        median = distance_group_median(scored, low, high)
+        axis.hlines(median, position - 0.36, position + 0.36, color="#52514e", linewidth=1.6)
+        tick_labels.append(f"{band_name}\nmedian {median:.1f}\nn = {len(band)}")
+        for x, y, name in zip(across, up, band["sa2_name"]):
+            if name in named:
+                names.append((x, y, name))
+    axis.axhline(100, color=GUIDE_COLOR, linewidth=1, linestyle="--")
+    axis.text(-0.55, 100.8, "Greater Sydney average, 100", ha="left", fontsize=8, color="#52514e")
+    axis.set_xticks(range(len(DISTANCE_BANDS)), tick_labels)
+    axis.set_xlim(-0.6, len(DISTANCE_BANDS) - 0.4)
+    axis.set_ylim(SCORE_AXIS_LOW, SCORE_AXIS_HIGH)
+    axis.set_yticks([70, 85, 100, 115, 130])
+    axis.set_xlabel("Distance from the CBD (km)")
+    axis.set_ylabel("Vibrancy score")
+    axis.set_title(textwrap.fill(stats["distance"]["title"], TITLE_WIDTH), loc="left", fontsize=12, fontweight="bold")
+    chart_axes(axis)
+    below = int((scored["vibrancy_score"] < SCORE_AXIS_LOW).sum())
+    note = f"Each dot is one SA2, placed by the straight-line distance from the Sydney GPO to its centre. Dots take the colour of their quintile, and the bar is the group's median. {sa2_count(below)} below 70 sit on the bottom edge."
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    add_note(fig, note)
+    label_dots(fig, axis, names)
+    return save_figure(fig, out_dir, "vibrancy_distance.png")
+
+
+def figure_histogram(regions, stats, out_dir):
+    """Save the histogram of scores in two-point bins, each bar in the quintile colour of its middle score."""
+    import matplotlib.pyplot as plt
+    scores = regions.loc[regions["scored"] == True, "vibrancy_score"]
+    starts = list(range(SCORE_AXIS_LOW, SCORE_AXIS_HIGH, HISTOGRAM_BIN))
+    counts = [int(((scores >= start) & (scores < start + HISTOGRAM_BIN)).sum()) for start in starts]
+    colors = []
+    for start in starts:
+        higher = int((scores > start + HISTOGRAM_BIN / 2).sum()) + 1
+        colors.append(RAMP[rank_class(higher, len(scores))])
+    top = math.ceil(max(counts) / 10) * 10
+    fig, axis = plt.subplots(figsize=(10, 5), dpi=180)
+    axis.bar([start + HISTOGRAM_BIN / 2 for start in starts], counts, width=HISTOGRAM_BIN - 0.2, color=colors)
+    median = float(sorted(scores)[len(scores) // 2])
+    axis.vlines(median, 0, top * 1.05, color="#52514e", linewidth=1.2)
+    axis.text(median, top * 1.07, f"median {median:.1f}", ha="center", fontsize=9)
+    bracket = top * 1.2
+    axis.plot([90, 90, 110, 110], [bracket - top * 0.04, bracket, bracket, bracket - top * 0.04], color="#52514e", linewidth=1.2)
+    axis.text(100, bracket + top * 0.02, f"{stats['score_middle_share']:.0%} of SA2s", ha="center", fontsize=9)
+    axis.set_xlim(SCORE_AXIS_LOW, SCORE_AXIS_HIGH)
+    axis.set_ylim(0, top * 1.32)
+    axis.set_yticks(range(0, top + 1, 10))
+    axis.set_xlabel("Vibrancy score")
+    axis.set_ylabel("SA2s in the bin")
+    axis.set_title(textwrap.fill(stats["histogram"]["title"], TITLE_WIDTH), loc="left", fontsize=12, fontweight="bold")
+    chart_axes(axis)
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    add_note(fig, "Each bar counts the SA2s whose score falls in a two-point range. The bracket marks 90 to 110, within 10 points of the Greater Sydney average of 100.")
+    return save_figure(fig, out_dir, "vibrancy_histogram.png")
+
+
+def figure_moran(regions, stats, out_dir):
+    """Save the Moran scatterplot: each SA2's score against its neighbours' average, coloured by cluster class."""
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    scored = regions[(regions["scored"] == True) & regions["neighbour_average_score"].notna()]
+    below = scored[scored["vibrancy_score"] < MORAN_AXIS_LOW]
+    plotted = scored[scored["vibrancy_score"] >= MORAN_AXIS_LOW]
+    x_high = padded_score_range(scored["vibrancy_score"])[1]
+    y_low, y_high = padded_score_range(plotted["neighbour_average_score"])
+    moran_i = stats["global_i"]
+    fig, axis = plt.subplots(figsize=(9, 6.6), dpi=180)
+    axis.axvline(100, color=GUIDE_COLOR, linewidth=1, linestyle="--")
+    axis.axhline(100, color=GUIDE_COLOR, linewidth=1, linestyle="--")
+    # The clusters are drawn first and the plain dots last, so the plain dots do not hide them.
+    for hotspot in reversed(HOTSPOT_ORDER):
+        group = plotted[plotted["hotspot_class"] == hotspot]
+        alpha = 0.55 if hotspot == "not significant" else 1
+        color = COLOR_ROLES["light"][HOTSPOT_CSS_NAME[hotspot]]
+        axis.scatter(group["vibrancy_score"], group["neighbour_average_score"], s=DOT_SIZE * 1.4, color=color,
+                     alpha=alpha, linewidths=0, zorder=3)
+    line_x = np.array([MORAN_AXIS_LOW, x_high])
+    axis.plot(line_x, 100 + moran_i * (line_x - 100), color="#0b0b0b", linewidth=1.2, zorder=4)
+    axis.text(0.99, 0.98, "High-high", transform=axis.transAxes, ha="right", va="top", fontsize=9)
+    axis.text(0.01, 0.98, "Low-high", transform=axis.transAxes, ha="left", va="top", fontsize=9)
+    axis.text(0.01, 0.02, "Low-low", transform=axis.transAxes, ha="left", va="bottom", fontsize=9)
+    axis.text(0.99, 0.02, "High-low", transform=axis.transAxes, ha="right", va="bottom", fontsize=9)
+    axis.set_xlim(MORAN_AXIS_LOW, x_high)
+    axis.set_ylim(y_low, y_high)
+    axis.set_xticks(range(MORAN_AXIS_LOW, x_high + 1, 10))
+    axis.set_yticks(range(y_low, y_high + 1, 10))
+    axis.set_xlabel("Vibrancy score")
+    axis.set_ylabel("Average score of neighbouring SA2s")
+    axis.set_title(textwrap.fill(stats["moran"]["title"], 75), loc="left", fontsize=12, fontweight="bold")
+    chart_axes(axis, vertical_grid=True)
+    key = [Line2D([], [], marker="o", linestyle="none", markersize=6, label=HOTSPOT_NAMES[hotspot],
+                  color=COLOR_ROLES["light"][HOTSPOT_CSS_NAME[hotspot]]) for hotspot in HOTSPOT_ORDER]
+    fig.legend(handles=key, loc="lower center", ncol=2, frameon=False, fontsize=8, bbox_to_anchor=(0.5, 0.045))
+    fig.tight_layout(rect=(0, 0.16, 1, 1))
+    note = f"Each dot is one SA2, and neighbours are SA2s that share a border or corner. The black line has a slope of {moran_i:.2f}, which is Moran's I."
+    if len(below):
+        note += f" {sa2_count(len(below))} below {MORAN_AXIS_LOW} not drawn: " + join_names(below["sa2_name"].tolist()) + "."
+    add_note(fig, note)
+    return save_figure(fig, out_dir, "vibrancy_moran.png")
+
+
+def scatter_dots(axis, x_values, y_values, scored, y_low, y_high):
+    """Draw every SA2 in its quintile colour. Return the SA2s to name: the four examples, then the top three of each quintile."""
+    names = [name for name in CARD_NAMES if name in set(scored["sa2_name"])]
+    for quintile in range(5, 0, -1):
+        top = scored[scored["vibrancy_quintile"] == quintile].nlargest(3, "vibrancy_score")["sa2_name"]
+        names += [name for name in top if name not in names]
+    dots = []
+    for code in x_values.index:
+        y = y_values[code]
+        if y < y_low or y > y_high:
+            continue
+        row = scored.loc[code]
+        axis.scatter([x_values[code]], [y], s=DOT_SIZE, color=RAMP[int(row["rank_class"])], linewidths=0)
+        if row["sa2_name"] in names:
+            dots.append((x_values[code], y, row["sa2_name"]))
+    return sorted(dots, key=lambda dot: names.index(dot[2]))
+
+
+def figure_intensity_design(regions, stats, out_dir):
+    """Save the Intensity against Design scatterplot, with the four example places named."""
+    import matplotlib.pyplot as plt
+    scored = regions[(regions["scored"] == True)].dropna(subset=["intensity_score", "design_score"]).set_index("sa2_code")
+    x_low, x_high = padded_score_range(scored["intensity_score"])
+    y_low, y_high = padded_score_range(scored["design_score"])
+    fig, axis = plt.subplots(figsize=(8.5, 6.4), dpi=180)
+    named = scatter_dots(axis, scored["intensity_score"], scored["design_score"], scored, y_low, y_high)
+    axis.set_xlim(x_low, x_high)
+    axis.set_ylim(y_low, y_high)
+    axis.set_xlabel("Intensity score")
+    axis.set_ylabel("Design score")
+    axis.set_title("Intensity against Design", loc="left", fontsize=12, fontweight="bold")
+    chart_axes(axis, vertical_grid=True)
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    correlation = stats["chart"]["correlations"]["intensity_design"]
+    add_note(fig, f"Dots take the colour of their quintile; the four example places and the top three of each quintile are named. Spearman correlation: {correlation:.2f} (1 would mean the two pillars rank the SA2s in exactly the same order).")
+    label_dots(fig, axis, named)
+    return save_figure(fig, out_dir, "vibrancy_intensity_design.png")
+
+
+def figure_density_diversity(regions, stats, out_dir):
+    """Save the Density against Diversity scatterplot, split at 100 into the four place types."""
+    import matplotlib.pyplot as plt
+    scored = regions[(regions["scored"] == True)].dropna(subset=["diversity_score"]).set_index("sa2_code")
+    density = (scored["intensity_score"] + scored["design_score"]) / 2
+    x_low, x_high = padded_score_range(density)
+    y_low, y_high = 60, SCORE_AXIS_HIGH
+    fig, axis = plt.subplots(figsize=(8.5, 6.4), dpi=180)
+    axis.axvline(100, color=GUIDE_COLOR, linewidth=1, linestyle="--")
+    axis.axhline(100, color=GUIDE_COLOR, linewidth=1, linestyle="--")
+    corners = [
+        ("dense and diverse", 0.99, 0.98, "right", "top"), ("less dense and diverse", 0.01, 0.98, "left", "top"),
+        ("less dense and less diverse", 0.01, 0.02, "left", "bottom"),
+        ("dense and less diverse", 0.99, 0.02, "right", "bottom"),
+    ]
+    for place_type, x, y, horizontal, vertical in corners:
+        color = COLOR_ROLES["light"][f"place-{PLACE_CSS_NAME[place_type]}-text"]
+        axis.text(x, y, place_type, transform=axis.transAxes, ha=horizontal, va=vertical, fontsize=9, color=color)
+    named = scatter_dots(axis, density, scored["diversity_score"], scored, y_low, y_high)
+    axis.set_xlim(x_low, x_high)
+    axis.set_ylim(y_low, y_high)
+    axis.set_xlabel("Density score (mean of the Intensity and Design scores)")
+    axis.set_ylabel("Diversity score")
+    axis.set_title("Density against Diversity", loc="left", fontsize=12, fontweight="bold")
+    chart_axes(axis, vertical_grid=True)
+    correlation = stats["chart"]["correlations"]["density_diversity"]
+    note = f"Dots take the colour of their quintile; the four example places and the top three of each quintile are named. Spearman correlation: {correlation:.2f} (1 would mean the two rank the SA2s in exactly the same order)."
+    off_axis = scored[scored["diversity_score"] < y_low]
+    if len(off_axis):
+        note += f" {sa2_count(len(off_axis))} below the axis: " + join_names(off_axis["sa2_name"].tolist()) + "."
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    add_note(fig, note)
+    label_dots(fig, axis, named)
+    return save_figure(fig, out_dir, "vibrancy_density_diversity.png")
+
+
+def figure_example_places(stats, out_dir):
+    """Save the four example places: each pillar score as a marker on a 70 to 130 track, then the card's facts."""
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8.6), dpi=180)
+    for axis, card in zip(axes.flatten(), stats["cards"]):
+        axis.set_xlim(SCORE_AXIS_LOW - 22, SCORE_AXIS_HIGH + 22)
+        axis.set_ylim(-5.0, 3.6)
+        hide_axes(axis)
+        axis.set_title(f'{card["name"]}\n{card["place_type"]}', loc="left", fontsize=11, fontweight="bold")
+        for row, pillar in enumerate(card["pillars"]):
+            y = 2.4 - row * 1.3
+            axis.plot([SCORE_AXIS_LOW, SCORE_AXIS_HIGH], [y, y], color="#e1e0d9", linewidth=7, solid_capstyle="round")
+            axis.plot([100, 100], [y - 0.45, y + 0.45], color="#52514e", linewidth=1)
+            axis.text(SCORE_AXIS_LOW - 3, y, pillar["label"], ha="right", va="center", fontsize=9)
+            if pd.isna(pillar["value"]):
+                axis.text(100, y, "n/a", ha="center", va="center", fontsize=9, color="#52514e")
+                continue
+            color = COLOR_ROLES["light"][f"{PILLAR_CSS_NAME[pillar['label']]}-bar"]
+            axis.scatter([pillar["clipped"]], [y], s=90, color=color, zorder=3)
+            off_scale = pillar["value"] < SCORE_AXIS_LOW or pillar["value"] > SCORE_AXIS_HIGH
+            text = f'{pillar["value"]:.1f}' + (" (off scale)" if off_scale else "")
+            axis.text(SCORE_AXIS_HIGH + 3, y, text, ha="left", va="center", fontsize=9)
+        axis.text(SCORE_AXIS_LOW, -1.1, "70", ha="center", va="top", fontsize=8, color="#52514e")
+        axis.text(100, -1.1, "Greater Sydney average", ha="center", va="top", fontsize=8, color="#52514e")
+        axis.text(SCORE_AXIS_HIGH, -1.1, "130", ha="center", va="top", fontsize=8, color="#52514e")
+        summary = (f'Score {card["score"]:.1f}, rank {card["rank"]} of 372 (1 is the highest). '
+                   f'Across the 22 alternative versions its rank runs from {card["rank_min"]} to {card["rank_max"]}.')
+        axis.text(SCORE_AXIS_LOW - 22, -2.0, textwrap.fill(summary, 62), ha="left", va="top", fontsize=8.5)
+        facts = "\n".join(f'{fact["display"]}, {fact["percentile"]}' for fact in card["facts"])
+        axis.text(SCORE_AXIS_LOW - 22, -3.3, facts, ha="left", va="top", fontsize=8.5)
+    fig.suptitle("Four places show what the score does and does not capture", x=0.01, ha="left", fontsize=14, fontweight="bold")
+    fig.tight_layout(rect=(0, 0.03, 1, 0.95))
+    add_note(fig, "Each marker is a pillar score on a fixed axis from 70 to 130 around the Greater Sydney average of 100. The facts are raw counts for each square kilometre, compared with the other scored SA2s.")
+    return save_figure(fig, out_dir, "vibrancy_example_places.png")
+
+
+def figure_walking_counts(regions, stats, day, out_dir):
+    """Save one day's walking-count scatterplot: score across, average daily count up, the three busiest sites named."""
+    import matplotlib.pyplot as plt
+    sites = stats["chart"]["foot_sites"].dropna(subset=[f"{day}_average"])
+    ranked = regions.set_index("sa2_code")["rank_class"]
+    x_low, x_high = padded_score_range(sites["vibrancy_score"])
+    top = math.ceil(sites[f"{day}_average"].max() / 10000) * 10000
+    fig, axis = plt.subplots(figsize=(8.5, 5.6), dpi=180)
+    busiest = set(sites.nlargest(3, f"{day}_average")["sa2_code"])
+    named = []
+    for _, site in sites.iterrows():
+        x, y = site["vibrancy_score"], site[f"{day}_average"]
+        axis.scatter([x], [y], s=DOT_SIZE * 3.5, color=RAMP[int(ranked[int(site["sa2_code"])])], linewidths=0)
+        if site["sa2_code"] in busiest:
+            named.append((x, y, site["sa2_name"]))
+    axis.set_xlim(x_low, x_high)
+    axis.set_ylim(0, top)
+    axis.set_yticks(range(0, top + 1, 10000), [f"{value:,}" for value in range(0, top + 1, 10000)])
+    axis.set_xlabel("Vibrancy score")
+    axis.set_ylabel(f"Daily count, {day}s")
+    axis.set_title(textwrap.fill(stats["foot_titles"][day], 70), loc="left", fontsize=12, fontweight="bold")
+    chart_axes(axis, vertical_grid=True)
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    add_note(fig, f"Each dot is one SA2 (n = {len(sites)}), all inner-city and all in the top quintile. Counts are City of Sydney pedestrian counts averaged over the four most recent surveys.")
+    label_dots(fig, axis, named)
+    return save_figure(fig, out_dir, f"vibrancy_walking_{day}.png")
+
+
+def figure_squares(total, highlighted, caption, note, filename, out_dir):
+    """Save a grid of `total` squares in rank order, row by row, with the squares at the `highlighted` positions marked."""
+    import matplotlib.pyplot as plt
+    positions = np.arange(total)
+    across = positions % GRID_COLUMNS
+    down = -(positions // GRID_COLUMNS)
+    marked = np.array([position in highlighted for position in positions])
+    fig, axis = plt.subplots(figsize=(9, 4.6), dpi=180)
+    axis.scatter(across[~marked], down[~marked], marker="s", s=170, color=GUIDE_COLOR, linewidths=0)
+    axis.scatter(across[marked], down[marked], marker="s", s=170, color=RAMP[-1], linewidths=0)
+    axis.set_aspect("equal")
+    hide_axes(axis)
+    axis.set_title(textwrap.fill(caption, 80), loc="left", fontsize=11, fontweight="bold")
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    add_note(fig, note)
+    return save_figure(fig, out_dir, filename)
+
+
+def figure_walking_squares(regions, stats, out_dir):
+    """Save the picture of where the SA2s with walking counts sit in the ranking."""
+    total = int((regions["scored"] == True).sum())
+    foot_sites = stats["chart"]["foot_sites"]
+    _, caption = walking_count_squares(total, foot_sites)
+    note = "Each square is one scored SA2 in rank order: rank 1 is the top left square. The dark squares have walking counts."
+    return figure_squares(total, walking_count_positions(foot_sites), caption, note, "vibrancy_walking_coverage.png", out_dir)
+
+
+def figure_chance_squares(regions, out_dir):
+    """Save the picture of how many of the cluster tests could look special by chance alone."""
+    total = int((regions["scored"] == True).sum())
+    _, caption, _ = chance_squares(total)
+    note = "Each square stands for one test. The dark squares are placed at random and are not real SA2s."
+    return figure_squares(total, chance_positions(total), caption, note, "vibrancy_chance.png", out_dir)
+
+
+def build_chart_figures(regions, stats, out_dir):
+    """Save a static version of each chart on the page into `out_dir`/images, and return the saved paths."""
+    image_dir = Path(out_dir) / "images"
+    image_dir.mkdir(parents=True, exist_ok=True)
+    return [
+        figure_distance(regions, stats, out_dir),
+        figure_histogram(regions, stats, out_dir),
+        figure_moran(regions, stats, out_dir),
+        figure_intensity_design(regions, stats, out_dir),
+        figure_density_diversity(regions, stats, out_dir),
+        figure_example_places(stats, out_dir),
+        figure_walking_counts(regions, stats, "weekday", out_dir),
+        figure_walking_counts(regions, stats, "weekend", out_dir),
+        figure_walking_squares(regions, stats, out_dir),
+        figure_chance_squares(regions, out_dir),
+    ]
 
 
 def float_or_none(value, digits=None):
