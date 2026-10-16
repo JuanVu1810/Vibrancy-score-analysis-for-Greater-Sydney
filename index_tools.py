@@ -28,23 +28,23 @@ def zscore(values):
 
 def standardised_score(values):
     """Rescale values to a mean of 100 and population SD of 10, keeping missing values."""
-    values = pd.Series(values, copy=False, dtype=float)
-    standard_deviation = values.std(ddof=0)
-    if standard_deviation == 0 or pd.isna(standard_deviation):
-        return pd.Series(np.nan, index=values.index, dtype=float)
-    return 100 + 10 * (values - values.mean()) / standard_deviation
+    return 100 + 10 * zscore(values)
+
+
+def with_geometry(frame, columns):
+    """Return a copy of the named columns plus the geometry column, with the geometry column called "geometry"."""
+    rows = frame[columns + [frame.geometry.name]].copy()
+    if rows.geometry.name != "geometry":
+        rows = rows.rename_geometry("geometry")
+    return rows
 
 
 def assign_points_to_sa2s(points, sa2s, code_column="SA2_CODE21"):
     """Return one SA2 code per point, using the lower code for boundary ties."""
-    point_rows = points[[points.geometry.name]].copy()
-    if point_rows.geometry.name != "geometry":
-        point_rows = point_rows.rename_geometry("geometry")
+    point_rows = with_geometry(points, [])
     point_rows = point_rows.reset_index(names="source_index")
     point_rows["feature_id"] = np.arange(len(point_rows))
-    boundary_rows = sa2s[[code_column, sa2s.geometry.name]].copy()
-    if boundary_rows.geometry.name != "geometry":
-        boundary_rows = boundary_rows.rename_geometry("geometry")
+    boundary_rows = with_geometry(sa2s, [code_column])
     joined = gpd.sjoin(point_rows, boundary_rows, how="left", predicate="intersects")
     joined = joined.sort_values(["feature_id", code_column], na_position="last")
     joined = joined.drop_duplicates("feature_id", keep="first")
@@ -54,54 +54,20 @@ def assign_points_to_sa2s(points, sa2s, code_column="SA2_CODE21"):
 
 
 def assign_polygons_to_sa2s(polygons, sa2s, code_column="SA2_CODE21", metric_crs=7856):
-    """Assign each polygon to its largest SA2 overlap, unless outside has more area."""
-    polygon_rows = polygons[[polygons.geometry.name]].copy()
-    if polygon_rows.geometry.name != "geometry":
-        polygon_rows = polygon_rows.rename_geometry("geometry")
-    polygon_rows = polygon_rows.to_crs(metric_crs)
-    polygon_rows.geometry = polygon_rows.geometry.make_valid()
-    polygon_rows = polygon_rows.reset_index(names="source_index")
-    polygon_rows["feature_id"] = np.arange(len(polygon_rows))
-    boundary_rows = sa2s[[code_column, sa2s.geometry.name]].copy()
-    if boundary_rows.geometry.name != "geometry":
-        boundary_rows = boundary_rows.rename_geometry("geometry")
-    boundary_rows = boundary_rows.to_crs(metric_crs)
-    matches = gpd.sjoin(polygon_rows, boundary_rows, how="left", predicate="intersects")
-    matches = matches.reset_index(drop=True)
-    matches["overlap_area"] = 0.0
-    matched = matches[code_column].notna()
-    boundary_geometry = boundary_rows.geometry
-    for row_index, row in matches[matched].iterrows():
-        polygon = polygon_rows.loc[row["feature_id"], "geometry"]
-        boundary = boundary_geometry.loc[row["index_right"]]
-        matches.loc[row_index, "overlap_area"] = polygon.intersection(boundary).area
-    return _choose_polygon_matches(polygon_rows, matches, code_column)
-
-
-def _choose_polygon_matches(polygons, matches, code_column):
-    """Summarise polygon overlaps and apply the outside and lower-code tie rules."""
-    rows = []
-    for feature_id, group in matches.groupby("feature_id", sort=True):
-        polygon_area = polygons.loc[feature_id, "geometry"].area
-        candidates = group[group[code_column].notna()].sort_values(
-            ["overlap_area", code_column], ascending=[False, True]
-        )
-        inside_area = candidates["overlap_area"].sum()
-        outside_area = max(0.0, polygon_area - inside_area)
-        winner_area = 0.0 if candidates.empty else candidates.iloc[0]["overlap_area"]
-        assigned = pd.NA
-        if not candidates.empty and outside_area <= winner_area:
-            assigned = int(candidates.iloc[0][code_column])
-        rows.append({
-            "source_index": polygons.loc[feature_id, "source_index"],
-            "assigned_sa2": assigned,
-            "winner_share": winner_area / polygon_area,
-            "outside_share": outside_area / polygon_area,
-            "n_sa2_touched": int(len(candidates)),
-        })
-    result = pd.DataFrame(rows).set_index("source_index")
-    result["assigned_sa2"] = result["assigned_sa2"].astype("Int64")
-    return result
+    """Assign each polygon to its largest SA2 overlap, unless outside has more area. Ties keep the lower code."""
+    shares = polygon_area_shares(polygons, sa2s, code_column, metric_crs)
+    winners = shares.sort_values(["area_share", "assigned_sa2"], ascending=[False, True])
+    winners = winners.drop_duplicates("source_index").set_index("source_index")
+    inside = shares.groupby("source_index")["area_share"].agg(inside_share="sum", n_sa2_touched="count")
+    result = pd.DataFrame({"winner_share": winners["area_share"], "inside_share": inside["inside_share"],
+                           "n_sa2_touched": inside["n_sa2_touched"]}).reindex(polygons.index)
+    result.index.name = "source_index"
+    result["winner_share"] = result["winner_share"].fillna(0.0)
+    result["outside_share"] = (1 - result["inside_share"].fillna(0.0)).clip(lower=0.0)
+    result["n_sa2_touched"] = result["n_sa2_touched"].fillna(0).astype(int)
+    won = result["outside_share"] <= result["winner_share"]
+    result["assigned_sa2"] = winners["assigned_sa2"].reindex(result.index).where(won).astype("Int64")
+    return result[["assigned_sa2", "winner_share", "outside_share", "n_sa2_touched"]]
 
 
 def count_intersections(roads, precision=7, min_legs=3):
@@ -126,17 +92,11 @@ def count_intersections(roads, precision=7, min_legs=3):
 
 def polygon_area_shares(polygons, sa2s, code_column="SA2_CODE21", metric_crs=7856):
     """Return one fractional SA2 allocation for every positive polygon overlap."""
-    polygon_rows = polygons[[polygons.geometry.name]].copy()
-    if polygon_rows.geometry.name != "geometry":
-        polygon_rows = polygon_rows.rename_geometry("geometry")
-    polygon_rows = polygon_rows.to_crs(metric_crs)
+    polygon_rows = with_geometry(polygons, []).to_crs(metric_crs)
     polygon_rows.geometry = polygon_rows.geometry.make_valid()
     polygon_rows = polygon_rows.reset_index(names="source_index")
     polygon_rows["feature_id"] = np.arange(len(polygon_rows))
-    boundary_rows = sa2s[[code_column, sa2s.geometry.name]].copy()
-    if boundary_rows.geometry.name != "geometry":
-        boundary_rows = boundary_rows.rename_geometry("geometry")
-    boundary_rows = boundary_rows.to_crs(metric_crs)
+    boundary_rows = with_geometry(sa2s, [code_column]).to_crs(metric_crs)
     matches = gpd.sjoin(polygon_rows, boundary_rows, how="left", predicate="intersects")
     rows = []
     for _, match in matches[matches[code_column].notna()].iterrows():
@@ -199,9 +159,16 @@ def classify_place_type(intensity_score, diversity_score, design_score):
     return f"{density_label} and {diversity_label}"
 
 
+def require_standardised(values):
+    """Stop if the values are not z-scores (mean 0, SD 1); the Moran formulas below assume they are."""
+    assert abs(np.mean(values)) < 1e-9 and abs(np.std(values) - 1) < 1e-9, \
+        "Moran's I needs z-scores (mean 0, standard deviation 1), not raw scores"
+
+
 def global_morans_i(values, weights, permutations=999, seed=20260926):
-    """Return global Moran's I and a two-sided permutation p-value."""
+    """Return global Moran's I and a two-sided permutation p-value. The values must be z-scores."""
     values = np.asarray(values, dtype=float)
+    require_standardised(values)
     weights = np.asarray(weights, dtype=float)
     n_areas = len(values)
     weight_sum = weights.sum()
@@ -216,8 +183,9 @@ def global_morans_i(values, weights, permutations=999, seed=20260926):
 
 
 def local_morans_observed(values, weights):
-    """Return local Moran's I values and row-standardised neighbour means."""
+    """Return local Moran's I values and row-standardised neighbour means. The values must be z-scores."""
     values = np.asarray(values, dtype=float)
+    require_standardised(values)
     weights = np.asarray(weights, dtype=float)
     neighbour_mean = weights @ values
     local_i = values * neighbour_mean
@@ -225,8 +193,9 @@ def local_morans_observed(values, weights):
 
 
 def local_morans_p_values(values, weights, local_i, permutations=999, seed=20260926):
-    """Return conditional-permutation p-values for local Moran's I values."""
+    """Return conditional-permutation p-values for local Moran's I values. The values must be z-scores."""
     values = np.asarray(values, dtype=float)
+    require_standardised(values)
     weights = np.asarray(weights, dtype=float)
     generator = np.random.default_rng(seed)
     p_values = np.empty(len(values))
@@ -256,11 +225,3 @@ def local_morans_labels(values, neighbour_mean, p_values, alpha=0.05):
         else:
             labels.append("low-high")
     return labels
-
-
-def local_morans_i(values, weights, permutations=999, seed=20260926, alpha=0.05):
-    """Return local Moran's I, conditional p-values and descriptive classes."""
-    local_i, neighbour_mean = local_morans_observed(values, weights)
-    p_values = local_morans_p_values(values, weights, local_i, permutations, seed)
-    labels = local_morans_labels(values, neighbour_mean, p_values, alpha)
-    return pd.DataFrame({"local_i": local_i, "p_value": p_values, "hotspot_class": labels})

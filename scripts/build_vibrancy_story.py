@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = ROOT / "output"
 TEMPLATE = Path(__file__).with_name("vibrancy_story_template.html")
 # The colour-roles table: the one place in the code where every named colour is defined, for both themes. Every
-# other colour name in this file (RAMP, PLACE_COLORS, HOTSPOT_COLORS, ...) and every colour in the template's CSS
+# other colour name in this file (RAMP, PLACE_COLORS, ...) and every colour in the template's CSS
 # is a copy of a value from here, so a colour only ever needs to change in one place.
 PILLAR_ORDER = ["Intensity", "Diversity", "Design"]
 PILLAR_CSS_NAME = {"Intensity": "intensity", "Diversity": "diversity", "Design": "design"}
@@ -70,37 +70,16 @@ COLOR_ROLES = {
         "place-dense-less-diverse-text": "#AB8876", "place-less-dense-less-diverse-text": "#c6b29c",
     },
 }
-# Views into the table above, kept so the rest of this file reads as it did before the colour-roles table existed.
+# Light-theme colours read from the table above, for the static figures and the page's map data.
 RAMP = [COLOR_ROLES["light"][f"fifth-{step}"] for step in range(1, 6)]
 HOTSPOT_COLOR = COLOR_ROLES["light"]["not-scored"]
-PILLAR_COLORS = {
-    theme: {
-        label: {
-            "ramp": [roles[f"{PILLAR_CSS_NAME[label]}-{step}"] for step in range(1, 6)],
-            "text": roles[f"{PILLAR_CSS_NAME[label]}-text"],
-            "bar": roles[f"{PILLAR_CSS_NAME[label]}-bar"],
-        }
-        for label in PILLAR_ORDER
-    }
-    for theme, roles in COLOR_ROLES.items()
-}
 PLACE_CSS_NAME = {
     "dense and diverse": "dense-diverse",
     "dense and less diverse": "dense-less-diverse",
     "less dense and diverse": "less-dense-diverse",
     "less dense and less diverse": "less-dense-less-diverse",
 }
-PLACE_THEME_COLORS = {
-    theme: {label: roles[f"place-{PLACE_CSS_NAME[label]}"] for label in PLACE_CSS_NAME}
-    for theme, roles in COLOR_ROLES.items()
-}
-PLACE_COLORS = PLACE_THEME_COLORS["light"]
-# The text-safe shade of each place colour (see the COLOR_ROLES comment above), for a place-type name
-# written as coloured letters rather than shown as a map fill or a swatch next to plain text.
-PLACE_TEXT_THEME_COLORS = {
-    theme: {label: roles[f"place-{PLACE_CSS_NAME[label]}-text"] for label in PLACE_CSS_NAME}
-    for theme, roles in COLOR_ROLES.items()
-}
+PLACE_COLORS = {label: COLOR_ROLES["light"][f"place-{name}"] for label, name in PLACE_CSS_NAME.items()}
 HOTSPOT_STYLES = {
     "high-high": {"weight": 1.5, "dash": ""},
     "low-low": {"weight": 1.5, "dash": "5 3"},
@@ -129,8 +108,8 @@ CARD_FACTS = [
     ("Street intersections", "intersections_per_km2", ("intersection per km²", "intersections per km²"),
      ("street intersection", "street intersections"), SMALL_DENSITY_PER_KM2),
 ]
-# Local Moran's I clusters: the class order, plain names for the page, and the light-theme colours (the page's CSS holds
-# the same light values and a set for the dark theme). No cluster colour is one of the fifths' blues or a place-type colour.
+# Local Moran's I clusters: the class order, plain names for the page, and each class's colour role in COLOR_ROLES.
+# No cluster colour is one of the fifths' blues or a place-type colour.
 HOTSPOT_ORDER = ["high-high", "low-low", "high-low", "low-high", "not significant"]
 HOTSPOT_NAMES = {
     "high-high": "High-high: high score, high-scoring neighbours",
@@ -143,7 +122,6 @@ HOTSPOT_CSS_NAME = {
     "high-high": "cluster-high-high", "low-low": "cluster-low-low", "high-low": "cluster-high-low",
     "low-high": "cluster-low-high", "not significant": "cluster-not-significant",
 }
-HOTSPOT_COLORS = {name: COLOR_ROLES["light"][role] for name, role in HOTSPOT_CSS_NAME.items()}
 # Static maps: thin, semi-transparent outlines so they do not dominate the picture (the page draws them thicker,
 # because there they can be switched off). The key names each outline class in plain words.
 STATIC_OUTLINE_WIDTH = 0.7
@@ -179,6 +157,14 @@ CBD_LAT = -33.8678
 METRIC_CRS = 7856
 # Fixed story frame: a readable metropolitan view is a design choice, not a data claim.
 START_VIEW = [[-34.10, 150.65], [-33.60, 151.35]]
+# The short methods summary that opens the final panel.
+METHODS_DETAIL = (
+    "The score combines 14 indicators in three pillars. Intensity is how much is packed into an area "
+    "(ten indicators), Diversity is how varied its mix of businesses and land uses is (two), and Design "
+    "is how connected its streets are (two). Each indicator is put on a common scale and averaged, and "
+    "the three pillars count equally. 22 alternative versions test how much the ranking depends on "
+    "these choices."
+)
 
 
 
@@ -199,9 +185,11 @@ def css_color_variables(theme):
         variables.extend(f"--{name}-{index}:{roles[f'{name}-{index + 1}']}" for index in range(5))
         variables.append(f"--{name}-text:{roles[f'{name}-text']}")
         variables.append(f"--{name}-bar:{roles[f'{name}-bar']}")
-    for label, name in PLACE_CSS_NAME.items():
-        variables.append(f"--place-{name}:{PLACE_THEME_COLORS[theme][label]}")
-        variables.append(f"--place-{name}-text:{PLACE_TEXT_THEME_COLORS[theme][label]}")
+    # Each place colour has a darker (or, in the dark theme, lighter) "-text" shade for a place-type name written
+    # as coloured letters; see the COLOR_ROLES comment above.
+    for name in PLACE_CSS_NAME.values():
+        variables.append(f"--place-{name}:{roles[f'place-{name}']}")
+        variables.append(f"--place-{name}-text:{roles[f'place-{name}-text']}")
     for name in HOTSPOT_CSS_NAME.values():
         variables.append(f"--{name}:{roles[name]}")
     return ";\n    ".join(variables) + ";"
@@ -221,60 +209,7 @@ def pillar_html(text):
     return text
 
 
-def colour_sheet_rows(theme):
-    """Return the labelled rows shown on one half of the colour reference sheet."""
-    roles = COLOR_ROLES[theme]
-    rows = [("Overall", [roles[f"fifth-{step}"] for step in range(1, 6)], ["1", "2", "3", "4", "5"])]
-    for label in PILLAR_ORDER:
-        name = PILLAR_CSS_NAME[label]
-        colours = [roles[f"{name}-{step}"] for step in range(1, 6)]
-        colours.extend([roles[f"{name}-text"], roles[f"{name}-bar"]])
-        rows.append((label, colours, ["1", "2", "3", "4", "5", "text", "bar"]))
-    place_labels = list(PLACE_CSS_NAME)
-    rows.append(("Place types", [PLACE_THEME_COLORS[theme][label] for label in place_labels], place_labels))
-    rows.append(("Clusters", [roles[HOTSPOT_CSS_NAME[name]] for name in HOTSPOT_ORDER], HOTSPOT_ORDER))
-    neutral_names = ["ink", "muted", "cluster-not-significant", "unavailable", "not-scored"]
-    neutral_labels = ["Ink", "Muted", "Not a cluster", "Not available", "Not scored"]
-    rows.append(("Neutrals", [roles[name] for name in neutral_names], neutral_labels))
-    return rows
-
-
-def figure_colour_system(path):
-    """Draw the light and dark colour roles side by side and return the saved path."""
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Rectangle
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fig, axes = plt.subplots(1, 2, figsize=(22, 10), dpi=160)
-    for axis, theme in zip(axes, ["light", "dark"]):
-        surface = "#fcfcfb" if theme == "light" else "#1a1a19"
-        ink = COLOR_ROLES[theme]["ink"]
-        axis.set_facecolor(surface)
-        axis.set_xlim(0, 10.2)
-        axis.set_ylim(0, 8.2)
-        axis.set_title(theme.title() + " theme", color=ink, loc="left", fontsize=15, fontweight="bold")
-        for row_index, (row_label, colours, labels) in enumerate(colour_sheet_rows(theme)):
-            y = 6.8 - row_index
-            axis.text(0, y + 0.42, row_label, color=ink, fontsize=10, fontweight="bold", va="bottom")
-            for colour_index, (colour, label) in enumerate(zip(colours, labels)):
-                x = 1.55 + colour_index * 1.18
-                face = "none" if label == "Not scored" else colour
-                axis.add_patch(Rectangle((x, y), 0.78, 0.68, facecolor=face, edgecolor=colour, linewidth=1.4))
-                axis.text(x + 0.39, y - 0.08, colour, color=ink, fontsize=7, ha="center", va="top")
-                display_label = label.replace(" and ", "\nand\n").replace("Not ", "Not\n")
-                axis.text(x + 0.39, y + 0.34, display_label, color=ink, fontsize=5.5, ha="center", va="center",
-                          clip_on=True)
-        axis.set_xticks([])
-        axis.set_yticks([])
-        for spine in axis.spines.values():
-            spine.set_visible(False)
-    fig.suptitle("Vibrancy colour system", x=0.01, ha="left", fontsize=18, fontweight="bold")
-    fig.tight_layout(rect=(0, 0, 1, 0.96))
-    assert_figure_text_layout(fig)
-    fig.savefig(path, dpi=160, bbox_inches="tight")
-    plt.close(fig)
-    return path
-def rank_class(rank, number_of_sa2s=372):
+def rank_class(rank, number_of_sa2s):
     """Return a top-to-bottom rank-fifth class index for one rank."""
     if pd.isna(rank):
         return None
@@ -282,18 +217,17 @@ def rank_class(rank, number_of_sa2s=372):
     return 4 - int(np.floor(position * 5 / number_of_sa2s))
 
 
-def read_table(tables_dir, filename, columns):
-    """Read one optional output table or return its empty schema."""
+def read_table(tables_dir, filename):
+    """Read one saved output table. A missing file stops the build, so the page is never built from partial results."""
     path = Path(tables_dir) / filename
-    if path.exists():
-        return pd.read_csv(path)
-    return pd.DataFrame(columns=columns)
+    assert path.exists(), f"{path} not found; run the vibrancy_index.ipynb notebook first (see README)."
+    return pd.read_csv(path)
 
 
 def add_hotspot_columns(regions, tables_dir):
     """Add each SA2's neighbours' average score and local p-value from the saved hot-spot table."""
     columns = ["sa2_code", "p_value", "neighbour_average_score"]
-    table = read_table(tables_dir, "vibrancy_hotspots.csv", columns)[columns].copy()
+    table = read_table(tables_dir, "vibrancy_hotspots.csv")[columns].copy()
     table["sa2_code"] = table["sa2_code"].astype(int)
     table = table.rename(columns={"p_value": "hotspot_p_value"})
     return regions.merge(table, on="sa2_code", how="left")
@@ -340,7 +274,6 @@ def top_fifth_stats(regions):
     top = scored[scored["vibrancy_quintile"] == 5]
     return {
         "scored_sa2s": len(scored),
-        "top_sa2s": len(top),
         "top_area_share": top["AREASQKM21"].sum() / scored["AREASQKM21"].sum(),
         "top_resident_share": top["residents"].sum() / scored["residents"].sum(),
     }
@@ -602,9 +535,9 @@ def rank_band_summary(scored):
 
 def chart_inputs(regions, tables_dir):
     """Collect compact tables used by the interactive SVG charts and controls."""
-    ranks = read_table(tables_dir, "vibrancy_variant_ranks.csv", ["sa2_code", "sa2_name", "Baseline"])
-    sensitivity = read_table(tables_dir, "vibrancy_sensitivity.csv", ["variant", "spearman_rank_correlation", "top_25_overlap"])
-    foot = read_table(tables_dir, "vibrancy_foot_traffic_sa2.csv", ["sa2_code", "weekday_average", "weekend_average", "sa2_name"])
+    ranks = read_table(tables_dir, "vibrancy_variant_ranks.csv")
+    sensitivity = read_table(tables_dir, "vibrancy_sensitivity.csv")
+    foot = read_table(tables_dir, "vibrancy_foot_traffic_sa2.csv")
     scored = regions[regions["scored"] == True].copy()
     foot = foot.merge(scored[["sa2_code", "vibrancy_score", "vibrancy_rank"]], on="sa2_code", how="left")
     density = (scored["intensity_score"] + scored["design_score"]) / 2
@@ -715,42 +648,31 @@ def foot_traffic_day_title(foot, day):
     return f"{day.capitalize()} counts have only a weak link with the score (Spearman {foot_traffic_spearman(foot, day):.2f})"
 
 
-def methods_detail():
-    """Return the short methods summary that opens the final panel."""
-    return (
-        "The score combines 14 indicators in three pillars. Intensity is how much is packed into an area "
-        "(ten indicators), Diversity is how varied its mix of businesses and land uses is (two), and Design "
-        "is how connected its streets are (two). Each indicator is put on a common scale and averaged, and "
-        "the three pillars count equally. 22 alternative versions test how much the ranking depends on "
-        "these choices."
-    )
-
-
 def compute_stats(regions, tables_dir=OUTPUT_DIR):
     """Collect every page number from saved score and analysis outputs."""
     headline = top_fifth_stats(regions)
     scored = regions[regions["scored"] == True].copy()
     rank_counts = [int((scored["rank_class"] == value).sum()) for value in range(5)]
     layers = layer_definitions(regions)
-    equity = read_table(tables_dir, "vibrancy_equity.csv", ["income_group", "top_quintile_share", "bottom_quintile_share"])
-    sensitivity = read_table(tables_dir, "vibrancy_sensitivity.csv", ["top_25_overlap"])
-    hotspots = read_table(tables_dir, "vibrancy_hotspot_global.csv", ["global_morans_i", "p_value"])
-    place_types = read_table(tables_dir, "vibrancy_place_types.csv", ["place_type", "sa2s", "residents"])
-    foot = read_table(tables_dir, "vibrancy_foot_traffic_check.csv", ["day_type", "sa2s", "spearman"])
+    equity = read_table(tables_dir, "vibrancy_equity.csv")
+    sensitivity = read_table(tables_dir, "vibrancy_sensitivity.csv")
+    hotspots = read_table(tables_dir, "vibrancy_hotspot_global.csv")
+    place_types = read_table(tables_dir, "vibrancy_place_types.csv")
+    foot = read_table(tables_dir, "vibrancy_foot_traffic_check.csv")
     chart = chart_inputs(regions, tables_dir)
-    top_overlap = sensitivity["top_25_overlap"] if "top_25_overlap" in sensitivity else pd.Series(dtype=float)
+    top_overlap = sensitivity["top_25_overlap"]
     stats = {"headline": headline, "rank_counts": rank_counts, "equity": equity, "place_types": place_types,
              "cards": build_cards(regions), "median_rank_range": float((scored["rank_max"] - scored["rank_min"]).median()),
-             "top_overlap_min": int(top_overlap.min()) if len(top_overlap) else 0,
-             "top_overlap_max": int(top_overlap.max()) if len(top_overlap) else 0,
-             "global_i": float(hotspots.iloc[0]["global_morans_i"]) if len(hotspots) else np.nan,
-             "global_p": float(hotspots.iloc[0]["p_value"]) if len(hotspots) else np.nan,
+             "top_overlap_min": int(top_overlap.min()),
+             "top_overlap_max": int(top_overlap.max()),
+             "global_i": float(hotspots.iloc[0]["global_morans_i"]),
+             "global_p": float(hotspots.iloc[0]["p_value"]),
              "foot": foot, "score_labels": score_fifth_labels(scored),
              "score_middle_share": float(((scored["vibrancy_score"] >= 90) & (scored["vibrancy_score"] < 110)).mean()),
              "rank_bands": rank_band_summary(scored), "layers": layers,
              "built_up_bounds": START_VIEW, "map_caption": map_caption(regions, headline),
              "chart": chart, "limits": limit_items(scored, chart["foot_sites"]),
-             "methods_detail": methods_detail(), "total_sa2s": len(regions)}
+             "total_sa2s": len(regions)}
     stats["moran"] = moran_card_text(regions, stats["global_i"])
     stats["distance"] = {"title": distance_card_title(regions)}
     stats["histogram"] = {"title": histogram_card_title(scored, stats["score_middle_share"])}
@@ -768,9 +690,13 @@ def compute_stats(regions, tables_dir=OUTPUT_DIR):
 
 
 def score_fifth_labels(scored):
-    """Return one-decimal score-range labels for the five ranking fifths."""
-    boundaries = scored["vibrancy_score"].quantile([0.2, 0.4, 0.6, 0.8]).to_list()
-    low, middle_low, middle_high, high = boundaries
+    """Return one-decimal score-range labels for the five ranking fifths of the overall score."""
+    return quintile_labels(scored["vibrancy_score"])
+
+
+def quintile_labels(values):
+    """Return one-decimal range labels for the five quintiles of a column of scores, top first."""
+    low, middle_low, middle_high, high = values.quantile([0.2, 0.4, 0.6, 0.8]).to_list()
     return [
         f"Top quintile: {high:.1f} and above",
         f"Second quintile: {middle_high:.1f} to under {high:.1f}",
@@ -781,7 +707,7 @@ def score_fifth_labels(scored):
 
 
 def layer_definitions(regions):
-    """Return map classes, labels and counts for the five interactive layers."""
+    """Return the name, key labels and counts for each of the six interactive map layers."""
     scored = regions[regions["scored"] == True].copy()
     layers = {}
     score_layers = {
@@ -794,23 +720,12 @@ def layer_definitions(regions):
         available = scored[column].dropna()
         ranks = available.rank(ascending=False, method="first")
         classes = ranks.map(lambda value: rank_class(value, len(available)))
-        low, middle_low, middle_high, high = available.quantile(
-            [0.2, 0.4, 0.6, 0.8]
-        ).to_list()
-        labels = [
-            f"Top quintile: {high:.1f} and above",
-            f"Second quintile: {middle_high:.1f} to under {high:.1f}",
-            f"Middle quintile: {middle_low:.1f} to under {middle_high:.1f}",
-            f"Fourth quintile: {low:.1f} to under {middle_low:.1f}",
-            f"Bottom quintile: under {low:.1f}",
-        ]
-        layers[key] = {"name": name, "classes": classes, "labels": labels,
+        layers[key] = {"name": name, "labels": quintile_labels(available),
                        "counts": [int((classes == value).sum()) for value in range(4, -1, -1)],
                        "unavailable": int(scored[column].isna().sum())}
     type_counts = scored["place_type"].value_counts()
     layers["place_types"] = {
         "name": "Place types",
-        "classes": scored["place_type"],
         "labels": list(PLACE_COLORS),
         "counts": [int(type_counts.get(name, 0)) for name in PLACE_COLORS],
         "unavailable": 0,
@@ -818,7 +733,6 @@ def layer_definitions(regions):
     hotspot_counts = scored["hotspot_class"].value_counts()
     layers["hotspots"] = {
         "name": "Hot spots",
-        "classes": scored["hotspot_class"],
         "labels": [HOTSPOT_NAMES[name] for name in HOTSPOT_ORDER],
         "counts": [int(hotspot_counts.get(name, 0)) for name in HOTSPOT_ORDER],
         "unavailable": 0,
@@ -826,26 +740,11 @@ def layer_definitions(regions):
     return layers
 
 
-def built_up_bounds(regions):
-    """Return bounds for SA2s holding about 95 percent of residents by density."""
-    scored = regions[regions["scored"] == True].sort_values("residents_per_ha", ascending=False).copy()
-    cumulative = scored["residents"].cumsum() / scored["residents"].sum()
-    built = scored.loc[cumulative <= 0.95]
-    if built.empty:
-        built = scored
-    west, south, east, north = built.to_crs(4326).total_bounds
-    return [[float(south), float(west)], [float(north), float(east)]]
-
-
 def map_caption(regions, headline):
     """Return the data-led main-map caption and outer top-fifth examples."""
     top = regions[(regions["scored"] == True) & (regions["vibrancy_quintile"] == 5)]
     outer = top[top["distance_km"] > 10].sort_values("vibrancy_rank")
-    names = outer["sa2_name"].head(4).tolist()
-    if len(names) > 1:
-        outer_names = ", ".join(names[:-1]) + " and " + names[-1]
-    else:
-        outer_names = ", ".join(names)
+    outer_names = join_names(outer["sa2_name"].head(4).tolist())
     return {"outer_count": int(len(outer)), "outer_names": outer_names, "top_count": int(len(top)),
             "area_share": headline["top_area_share"], "resident_share": headline["top_resident_share"]}
 
@@ -868,6 +767,24 @@ def assert_figure_text_layout(fig):
     for position, (first_text, first) in enumerate(boxes):
         for second_text, second in boxes[position + 1:]:
             assert not first.overlaps(second), f"Text overlaps: {first_text} / {second_text}"
+
+
+def save_figure(fig, out_dir, filename, bbox_inches=None):
+    """Check the figure's text layout, save it as images/<filename> and close it. Return the saved path."""
+    import matplotlib.pyplot as plt
+    assert_figure_text_layout(fig)
+    path = Path(out_dir) / "images" / filename
+    fig.savefig(path, dpi=180, bbox_inches=bbox_inches)
+    plt.close(fig)
+    return path
+
+
+def hide_axes(axis):
+    """Remove a map axis's ticks and frame."""
+    axis.set_xticks([])
+    axis.set_yticks([])
+    for spine in axis.spines.values():
+        spine.set_visible(False)
 
 
 def quiet_axes(axis):
@@ -970,10 +887,7 @@ def save_two_panel_map(regions, column, colors, title, filename, out_dir, key_en
     built_up.set_title("The built-up area", loc="left", fontsize=11, fontweight="bold")
     for axis in (whole, built_up):
         axis.set_anchor("N")
-        axis.set_xticks([])
-        axis.set_yticks([])
-        for spine in axis.spines.values():
-            spine.set_visible(False)
+        hide_axes(axis)
     fig.suptitle(title, x=0.01, ha="left", fontsize=14, fontweight="bold")
     entries = key_entries + (outline_key_entries(drawn) if outlines else [])
     legend = fig.legend(handles=entries, loc="lower center", ncol=2, frameon=False, fontsize=9)
@@ -982,11 +896,7 @@ def save_two_panel_map(regions, column, colors, title, filename, out_dir, key_en
             label.set_fontweight("bold")
     key_rows = (len(entries) + 1) // 2
     fig.tight_layout(rect=(0, 0.03 + 0.028 * key_rows, 1, 0.965))
-    assert_figure_text_layout(fig)
-    path = Path(out_dir) / "images" / filename
-    fig.savefig(path, dpi=180, bbox_inches="tight")
-    plt.close(fig)
-    return path
+    return save_figure(fig, out_dir, filename, bbox_inches="tight")
 
 
 def save_map(regions, column, filename, title, out_dir, key_entries, note=None, ramp=RAMP):
@@ -1000,16 +910,9 @@ def save_map(regions, column, filename, title, out_dir, key_entries, note=None, 
         axis.legend(handles=key_entries, loc="upper center", bbox_to_anchor=(0.5, -0.03), ncol=2, frameon=False, fontsize=9)
     if note:
         axis.text(0.02, 0.02, note, transform=axis.transAxes, fontsize=9, color="#52514e")
-    axis.set_xticks([])
-    axis.set_yticks([])
-    for spine in axis.spines.values():
-        spine.set_visible(False)
+    hide_axes(axis)
     fig.tight_layout()
-    assert_figure_text_layout(fig)
-    path = Path(out_dir) / "images" / filename
-    fig.savefig(path, dpi=180, bbox_inches="tight")
-    plt.close(fig)
-    return path
+    return save_figure(fig, out_dir, filename, bbox_inches="tight")
 
 
 def figure_main_map(regions, stats, out_dir):
@@ -1047,8 +950,9 @@ def figure_pillars(regions, out_dir):
         if not_available:
             key_entries.append(grey_key_swatch(f"Not available ({not_available})"))
         key_entries.append(hollow_key_swatch("Not scored"))
+        ramp = [COLOR_ROLES["light"][f"{PILLAR_CSS_NAME[label]}-{step}"] for step in range(1, 6)]
         paths.append(save_map(copy, "rank_class", filename, f"{label} by rank quintile", out_dir, key_entries,
-                              note=f"Darker = higher quintile of {label}", ramp=PILLAR_COLORS["light"][label]["ramp"]))
+                              note=f"Darker = higher quintile of {label}", ramp=ramp))
     return paths
 
 
@@ -1074,11 +978,7 @@ def figure_equity(stats, out_dir):
     axis.legend(frameon=False)
     quiet_axes(axis)
     fig.tight_layout()
-    assert_figure_text_layout(fig)
-    path = Path(out_dir) / "images" / "vibrancy_equity.png"
-    fig.savefig(path, dpi=180)
-    plt.close(fig)
-    return path
+    return save_figure(fig, out_dir, "vibrancy_equity.png")
 
 
 def figure_rank_ranges(stats, out_dir):
@@ -1106,11 +1006,23 @@ def figure_rank_ranges(stats, out_dir):
     axis.set_title("Middle-ranked SA2s move furthest across variants", loc="left", fontsize=13, fontweight="bold")
     quiet_axes(axis)
     fig.tight_layout()
-    assert_figure_text_layout(fig)
-    path = Path(out_dir) / "images" / "vibrancy_rank_ranges.png"
-    fig.savefig(path, dpi=180)
-    plt.close(fig)
-    return path
+    return save_figure(fig, out_dir, "vibrancy_rank_ranges.png")
+
+
+def float_or_none(value, digits=None):
+    """Return a value as a float, rounded to `digits` decimals if given, or None if it is missing."""
+    if pd.isna(value):
+        return None
+    if digits is None:
+        return float(value)
+    return round(float(value), digits)
+
+
+def int_or_none(value):
+    """Return a value as a whole number, or None if it is missing."""
+    if pd.isna(value):
+        return None
+    return int(value)
 
 
 def geojson(regions):
@@ -1121,45 +1033,46 @@ def geojson(regions):
     for _, row in data.iterrows():
         is_scored = bool(row["scored"]) if pd.notna(row["scored"]) else False
         name = row["sa2_name"] if pd.notna(row["sa2_name"]) else row["SA2_NAME21"]
+        if pd.isna(row["intensity_score"]) or pd.isna(row["design_score"]):
+            density = None
+        else:
+            density = round(float((row["intensity_score"] + row["design_score"]) / 2), 1)
         properties = {"id": int(row["sa2_code"]), "name": name, "scored": is_scored,
-                      "score": None if pd.isna(row["vibrancy_score"]) else float(row["vibrancy_score"]),
-                      "rank": None if pd.isna(row["vibrancy_rank"]) else int(row["vibrancy_rank"]),
-                      "rank_class": None if pd.isna(row["rank_class"]) else int(row["rank_class"]),
-                      "rank_min": None if pd.isna(row["rank_min"]) else int(row["rank_min"]),
-                      "rank_max": None if pd.isna(row["rank_max"]) else int(row["rank_max"]),
+                      "score": float_or_none(row["vibrancy_score"]),
+                      "rank": int_or_none(row["vibrancy_rank"]),
+                      "rank_class": int_or_none(row["rank_class"]),
+                      "rank_min": int_or_none(row["rank_min"]),
+                      "rank_max": int_or_none(row["rank_max"]),
                       "place_type": "not scored" if not is_scored else row["place_type"],
                       "hotspot": "not significant" if not is_scored else row["hotspot_class"],
-                      "intensity": None if pd.isna(row["intensity_score"]) else float(row["intensity_score"]),
-                      "diversity": None if pd.isna(row["diversity_score"]) else float(row["diversity_score"]),
-                      "design": None if pd.isna(row["design_score"]) else float(row["design_score"]),
-                      "density": (
-                          None
-                          if pd.isna(row["intensity_score"]) or pd.isna(row["design_score"])
-                          else round(
-                              float((row["intensity_score"] + row["design_score"]) / 2), 1
-                          )
-                      ),
-                      "intensity_z": None if pd.isna(row["intensity_z"]) else float(row["intensity_z"]),
-                      "diversity_z": None if pd.isna(row["diversity_z"]) else float(row["diversity_z"]),
-                      "design_z": None if pd.isna(row["design_z"]) else float(row["design_z"]),
-                      "distance_km": None if pd.isna(row["distance_km"]) else float(row["distance_km"]),
-                      "residents": None if pd.isna(row["residents"]) else int(row["residents"]),
-                      "median_income": None if pd.isna(row["median_income"]) else int(row["median_income"]),
+                      "intensity": float_or_none(row["intensity_score"]),
+                      "diversity": float_or_none(row["diversity_score"]),
+                      "design": float_or_none(row["design_score"]),
+                      "density": density,
+                      "intensity_z": float_or_none(row["intensity_z"]),
+                      "diversity_z": float_or_none(row["diversity_z"]),
+                      "design_z": float_or_none(row["design_z"]),
+                      "distance_km": float_or_none(row["distance_km"]),
+                      "residents": int_or_none(row["residents"]),
+                      "median_income": int_or_none(row["median_income"]),
                       "businesses": total_count(row["businesses_per_km2"], row["area_km2"]),
                       "stops": total_count(row["stops_per_km2"], row["area_km2"]),
                       "intersections": total_count(row["intersections_per_km2"], row["area_km2"]),
-                      "neighbour_average_score": (
-                          None if pd.isna(row["neighbour_average_score"]) else round(float(row["neighbour_average_score"]), 1)
-                      ),
-                      "hotspot_p_value": None if pd.isna(row["hotspot_p_value"]) else round(float(row["hotspot_p_value"]), 3),
-                      "residents_per_ha": None if pd.isna(row["residents_per_ha"]) else float(row["residents_per_ha"]),
-                      "businesses_per_km2": None if pd.isna(row["businesses_per_km2"]) else float(row["businesses_per_km2"]),
-                      "stops_per_km2": None if pd.isna(row["stops_per_km2"]) else float(row["stops_per_km2"]),
-                      "intersections_per_km2": None if pd.isna(row["intersections_per_km2"]) else float(row["intersections_per_km2"]),
+                      "neighbour_average_score": float_or_none(row["neighbour_average_score"], digits=1),
+                      "hotspot_p_value": float_or_none(row["hotspot_p_value"], digits=3),
+                      "residents_per_ha": float_or_none(row["residents_per_ha"]),
+                      "businesses_per_km2": float_or_none(row["businesses_per_km2"]),
+                      "stops_per_km2": float_or_none(row["stops_per_km2"]),
+                      "intersections_per_km2": float_or_none(row["intersections_per_km2"]),
                       "flag": "" if pd.isna(row["flag"]) else str(row["flag"])}
         geometry = json.loads(gpd.GeoSeries([row.geometry], crs=4326).to_json())["features"][0]["geometry"]
         features.append({"type": "Feature", "properties": properties, "geometry": geometry})
     return {"type": "FeatureCollection", "features": features}
+
+
+def table_records(table):
+    """Return a table's rows as a list of dicts, with missing values as None (null in the page's JSON)."""
+    return table.where(pd.notna(table), None).to_dict("records")
 
 
 def page_html(regions, stats):
@@ -1176,26 +1089,15 @@ def page_html(regions, stats):
             f'<td>{int(row.residents):,}</td><td>'
             f'{html.escape(str(row.best_ranked_examples))}</td></tr>'
         )
-    bands = stats["rank_bands"]
-    notice = "; ".join(f'{band["label"]}: {band["median"]:g} places' for band in bands)
-    layer_rows = {
-        key: {
-            "name": value["name"],
-            "labels": value["labels"],
-            "counts": value["counts"],
-            "unavailable": value["unavailable"],
-        }
-        for key, value in stats["layers"].items()
-    }
     chart = stats["chart"]
     data = {"geo": geojson(regions), "ramp": RAMP, "hotspot_styles": HOTSPOT_STYLES,
             "place_colors": PLACE_COLORS, "hotspot_order": HOTSPOT_ORDER, "global_i": stats["global_i"],
-            "layers": layer_rows, "built_up_bounds": stats["built_up_bounds"],
+            "layers": stats["layers"], "built_up_bounds": stats["built_up_bounds"],
             "equity": stats["equity"].to_dict("records"), "rank_bands": stats["rank_bands"],
-            "foot_sites": chart["foot_sites"].where(pd.notna(chart["foot_sites"]), None).to_dict("records"),
+            "foot_sites": table_records(chart["foot_sites"]),
             "correlations": chart["correlations"],
-            "variant_ranks": chart["variant_ranks"].where(pd.notna(chart["variant_ranks"]), None).to_dict("records"),
-            "sensitivity": chart["sensitivity"].where(pd.notna(chart["sensitivity"]), None).to_dict("records"),
+            "variant_ranks": table_records(chart["variant_ranks"]),
+            "sensitivity": table_records(chart["sensitivity"]),
             "score_middle_share": stats["score_middle_share"],
             "card_names": [card["name"] for card in stats["cards"]]}
     limits = "".join(f"<li>{html.escape(item)}</li>" for item in stats["limits"])
@@ -1239,7 +1141,7 @@ def page_html(regions, stats):
         "CHANCE_PICTURE": chance_picture, "CHANCE_CAPTION": html.escape(chance_caption),
         "BY_CHANCE": str(by_chance),
         "LABELLED_CLUSTERS": str(labelled_clusters),
-        "METHODS_DETAIL": pillar_html(stats["methods_detail"]),
+        "METHODS_DETAIL": pillar_html(METHODS_DETAIL),
         "COLOR_VARIABLES_LIGHT": css_color_variables("light"),
         "COLOR_VARIABLES_DARK": css_color_variables("dark"),
         "DATA": json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/"),
@@ -1324,7 +1226,6 @@ def main():
     parser.add_argument("--no-images", action="store_true")
     args = parser.parse_args()
     _, _, paths = build(args.scores, args.out, args.tables, not args.no_page, not args.no_images)
-    paths.append(figure_colour_system(OUTPUT_DIR / "colour_system.png"))
     for path in paths:
         print(path)
 

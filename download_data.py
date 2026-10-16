@@ -10,7 +10,8 @@ Each file goes to raw/<source>/<date>/<file>. A source that is already downloade
 there by hand is used as it is. An unfinished download stays as <file>.part and carries on from there next time.
 Every source is recorded in raw/manifest.json, so `python -m etl run` can check, clean and load the files later.
 
-The links below are the releases on offer on 26 Sep 2026. Change a link to get a newer release.
+The links below are the releases on offer on 26 Sep 2026. To get a newer release, change its link and delete
+raw/<source>/ (a source that is already in raw/ is never downloaded again).
 """
 import hashlib
 import http.client
@@ -125,7 +126,9 @@ def download(url, dest, headers):
     dest.parent.mkdir(parents=True, exist_ok=True)
     for attempt in range(1, 11):
         have = part.stat().st_size if part.exists() else 0
-        request = Request(url, headers={**HEADERS, **headers, **({"Range": f"bytes={have}-"} if have else {})})
+        request = Request(url, headers={**HEADERS, **({"Range": f"bytes={have}-"} if have else {})})
+        for name, value in headers.items():  # unredirected: an API key is never passed on to the host a redirect points to
+            request.add_unredirected_header(name, value)
         try:
             with urlopen(request, timeout=60) as r:
                 if r.status == 206:  # the server continues from byte `have`

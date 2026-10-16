@@ -1,5 +1,4 @@
 """Tests for the parts of the ETL sources that don't need a download: shop and road rules, and sheet parsers."""
-import pandas as pd
 import pytest
 from openpyxl import Workbook
 

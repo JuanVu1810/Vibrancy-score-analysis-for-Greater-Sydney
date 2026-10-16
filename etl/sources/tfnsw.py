@@ -13,7 +13,6 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from openpyxl import load_workbook
-from shapely.geometry import Point
 
 from ..core import AU_BBOX, NSW_BBOX, EtlError, Snapshot, Source, error, to_int, warn
 

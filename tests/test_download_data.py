@@ -79,3 +79,31 @@ def test_a_zip_is_checked_to_be_complete(server, tmp_path):
 def test_a_403_stops_at_once_with_a_clear_message(server, tmp_path):
     with pytest.raises(RuntimeError, match="403"):
         download_data.download(f"{server}/forbidden", tmp_path / "x.bin", {})
+
+
+def test_an_api_key_is_sent_to_the_first_host_only_and_not_after_a_redirect(monkeypatch, tmp_path):
+    received = {}
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            received[self.path] = self.headers.get("Authorization")
+            if self.path == "/start":
+                self.send_response(302)
+                self.send_header("Location", "/final")
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Length", "5")
+            self.end_headers()
+            self.wfile.write(b"hello")
+
+    httpd = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    monkeypatch.setattr(download_data.time, "sleep", lambda seconds: None)
+    download_data.download(f"http://127.0.0.1:{httpd.server_port}/start", tmp_path / "x.bin", {"Authorization": "apikey SECRET"})
+    httpd.shutdown()
+    assert received["/start"] == "apikey SECRET"
+    assert received["/final"] is None

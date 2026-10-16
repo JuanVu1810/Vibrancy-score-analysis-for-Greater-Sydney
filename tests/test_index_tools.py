@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import pytest
 import geopandas as gpd
 from shapely.geometry import LineString, Point, Polygon
 
@@ -11,7 +12,6 @@ from index_tools import (
     classify_place_type,
     count_intersections,
     global_morans_i,
-    local_morans_i,
     local_morans_labels,
     local_morans_observed,
     local_morans_p_values,
@@ -173,12 +173,6 @@ def test_global_morans_i_matches_hand_checked_chain_values():
     assert abs(negative_i + 1.0) < 1e-12
 
 
-def test_local_morans_i_returns_hand_checked_local_values():
-    local = local_morans_i([1, 1, -1, -1], chain_weights(), permutations=9, seed=1)
-    assert np.allclose(local["local_i"], [1.0, 0.0, 0.0, 1.0])
-    assert set(local["hotspot_class"]) == {"not significant"}
-
-
 def test_local_morans_observed_matches_the_chain_example():
     local_i, neighbour_mean = local_morans_observed([1, 1, -1, -1], chain_weights())
     assert np.allclose(neighbour_mean, [1.0, 0.0, 0.0, -1.0])
@@ -202,3 +196,11 @@ def test_standardised_score_has_mean_one_hundred_sd_ten_and_keeps_missing():
     assert abs(scores.mean() - 100) < 1e-12
     assert abs(scores.std(ddof=0) - 10) < 1e-12
     assert pd.isna(scores.iloc[3])
+
+
+def test_morans_i_refuses_raw_scores_that_are_not_z_scores():
+    """Scores with a mean of 100 would give a Moran's I near 1 whatever the pattern, so they are refused."""
+    with pytest.raises(AssertionError, match="z-scores"):
+        global_morans_i([101, 101, 99, 99], chain_weights(), permutations=9, seed=1)
+    with pytest.raises(AssertionError, match="z-scores"):
+        local_morans_observed([101, 101, 99, 99], chain_weights())

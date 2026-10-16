@@ -11,7 +11,6 @@ from ..core import NSW_BBOX, Snapshot, Source, error, inside, to_int, warn
 
 # The election's event id, used in the release name: 31496 is the 2025 federal election.
 EVENT_ID = 31496
-URL = f"https://results.aec.gov.au/{EVENT_ID}/Website/Downloads/GeneralPollingPlacesDownload-{EVENT_ID}.csv"
 
 _RENAME = {"State": "state", "DivisionID": "division_id", "DivisionNm": "division_name",
            "PollingPlaceID": "polling_place_id", "PollingPlaceTypeID": "polling_place_type_id",

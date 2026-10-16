@@ -7,7 +7,6 @@ and take the newest year in the workbook, so a new release is picked up without 
 from __future__ import annotations
 
 import re
-from datetime import datetime
 from pathlib import Path
 
 import geopandas as gpd
@@ -23,6 +22,14 @@ LICENCE = "CC BY 4.0"
 ATTRIBUTION = "Australian Bureau of Statistics"
 
 GS_SA2_COUNT = 373  # SA2s in Greater Sydney, ASGS Edition 3 (2021)
+
+
+def boundary_codes(ctx, issues: list):
+    """The Greater Sydney SA2 codes, or None after adding a warning that the coverage check cannot be done."""
+    codes = greater_sydney_codes(ctx)
+    if codes is None:
+        issues.append(warn("the SA2 boundaries are not available, so Greater Sydney coverage was not checked"))
+    return codes
 
 
 def _null_int(series) -> pd.Series:
@@ -156,7 +163,7 @@ def check_business(out: dict, ctx) -> list:
         issues.append(error("duplicate industry and SA2 rows"))
     if df[BUSINESS_COLS[4:]].isna().any().any():
         issues.append(warn(f"{int(df[BUSINESS_COLS[4:]].isna().sum().sum())} empty count cells"))
-    gs = greater_sydney_codes(ctx)
+    gs = boundary_codes(ctx, issues)
     if gs is not None and gs - set(df["SA2_CODE21"]):
         issues.append(error(f"{len(gs - set(df['SA2_CODE21']))} Greater Sydney SA2s are missing"))
     return issues
@@ -214,7 +221,7 @@ def check_income(out: dict, ctx) -> list:
         issues.append(error(f"median income outside 5k to 400k: {mi.min()} to {mi.max()}"))
     if df[INCOME_COLS[2:]].isna().any().any():
         issues.append(warn(f"{int(df[INCOME_COLS[2:]].isna().any(axis=1).sum())} SA2s have a missing value (np)"))
-    gs = greater_sydney_codes(ctx)
+    gs = boundary_codes(ctx, issues)
     if gs is not None and gs - set(df["SA2_CODE21"]):
         issues.append(error(f"{len(gs - set(df['SA2_CODE21']))} Greater Sydney SA2s are missing"))
     return issues
@@ -294,7 +301,7 @@ def check_population(out: dict, ctx) -> list:
     total = int(df["total_people"].sum())
     if not (4_500_000 < total < 7_000_000):
         issues.append(error(f"Greater Sydney total of {total:,} people looks wrong"))
-    gs = greater_sydney_codes(ctx)
+    gs = boundary_codes(ctx, issues)
     if gs is not None and gs != set(df["SA2_CODE21"]):
         issues.append(error("population SA2s differ from the boundary SA2s"))
     return issues
@@ -397,7 +404,7 @@ def check_mesh_blocks(out: dict, ctx) -> list:
         issues.append(error(f"{persons:,} people in Greater Sydney looks wrong"))
     if df["dwellings"].isna().any():
         issues.append(warn(f"{int(df['dwellings'].isna().sum())} mesh blocks have no Census count"))
-    sa2 = greater_sydney_codes(ctx)
+    sa2 = boundary_codes(ctx, issues)
     if sa2 is not None and set(df["SA2_CODE21"]) - sa2:
         issues.append(error("some mesh blocks belong to SA2s that are not in the SA2 boundaries"))
     return issues

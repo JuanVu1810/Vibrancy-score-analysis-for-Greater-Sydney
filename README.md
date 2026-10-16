@@ -24,7 +24,7 @@ transport, streets and land use. It does not measure how many people are actuall
 
 **Status.** The data pipeline is built and tested: it downloads 15 sources, then cleans, checks and loads them into
 PostGIS as 17 data tables, plus two tables for source records and quality checks. The vibrancy index (fourteen indicators in three pillars), its checks and the data story page are
-built and tested too. The methodology book in `vibrancy/book/` is still being written.
+built too. The downloader, the ETL and the index functions have tests in this repository; the saved score and hot-spot tables are checked when `output/` exists. The two test files for the story page builder and the notebook's structure are kept only on the author's machine. The methodology book in `vibrancy/book/` is still being written.
 
 ## Results
 
@@ -138,7 +138,7 @@ what takes `raw/` to about 2 GB.
 - **The database** is published on `127.0.0.1:5433`, so it cannot be reached from other machines. User, database and
   port can be changed in `.env`.
 - **Where the checks are.** `staging/data_quality_report.csv` lists the result of every check as PASS, WARNING or FAIL.
-- **Tests.** `docker compose run --rm --no-deps --entrypoint python etl -m pytest tests -q`
+- **Tests.** `docker compose run --rm --no-deps --entrypoint python etl -m pytest tests -q`. The tests of the saved score and hot-spot tables are skipped when `output/` does not exist yet.
 - **More options.** Running one source, loading into a PostgreSQL server you already have, starting again from scratch,
   and viewing the tables in pgAdmin are in [etl/README.md](etl/README.md).
 - **As a notebook.** [etl_walkthrough.ipynb](etl_walkthrough.ipynb) runs the same pipeline one explained stage at a time.
@@ -163,6 +163,7 @@ docker compose run --rm --no-deps --entrypoint python etl -m pytest tests -q
 - **Order matters.** `output/` is git-ignored, so a fresh clone must run step 1 before step 2: the page is built from the
   files in `output/`. The notebook is saved with its outputs, so you can read the results without
   running it; step 1 writes a fresh executed copy to `output/vibrancy_index.executed.ipynb`. On the author's machine step 1 took about 40 seconds and step 2 about 10.
+- **Newer data.** The notebook prints whether each count matches the number documented here (stops, shops, school catchments, place types and so on). A fresh download can differ, and then it prints DIFFERS and carries on. The story builder stops with a message if a table in `output/` is missing.
 - **What each step writes.** Step 1 only reads the database and writes files to `output/`. Step 2 rewrites
   `vibrancy/index.html` and the figures in `vibrancy/images/`. Neither step writes to the database.
 
@@ -190,7 +191,7 @@ jupyter-book build --html      # the site is written to vibrancy/book/_build/htm
 | `output/` | The generated results (git-ignored): the scores, the checks, the further analyses and the executed notebook |
 | `vibrancy/index.html`, `vibrancy/images/` | The data story page and its static figures |
 | `vibrancy/book/` | The methodology book (in progress); the rest of `vibrancy/` is the story page above |
-| `tests/` | Tests for the downloader, the unzipping, the parsers, the quality checks, the index functions, the saved score table and the saved hot-spot table |
+| `tests/` | Tests for the downloader, the unzipping, the parsers, the quality checks, the index functions, the manifest checksums, the saved score table and the saved hot-spot table |
 | `docker-compose.yml`, `Dockerfile` | The PostGIS database and the Python environment |
 | `requirements.txt`, `requirements.lock` | The direct dependencies, and a full pin of every package (the Docker image installs the lock file) |
 | `.env.example` | Template for the private `.env` |

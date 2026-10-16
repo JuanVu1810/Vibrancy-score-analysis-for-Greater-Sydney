@@ -18,12 +18,11 @@ from functools import lru_cache
 
 from .core import AU_BBOX, NSW_BBOX
 from .quality import QualityRecord, counts
+from .sources.abs import INDUSTRIES
+from .sources.osm import ROAD_TYPES
 
 SA2_CODE_RANGE = (100_000_000, 199_999_999)  # NSW SA2 codes start with 1
 SA1_CODE_RANGE = (10_000_000_000, 19_999_999_999)  # NSW SA1 and mesh block codes have 11 digits and start with 1
-ROAD_TYPES = ("residential", "living_street", "unclassified", "tertiary", "tertiary_link", "secondary",
-              "secondary_link", "primary", "primary_link", "trunk", "trunk_link", "pedestrian")
-INDUSTRIES = list("ABCDEFGHIJKLMNOPQRS")
 AGE_BANDS = ["0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49",
              "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80-84", "85-and-over"]
 BUSINESS_COUNTS = ["0_to_50k_businesses", "50k_to_200k_businesses", "200k_to_2m_businesses",
@@ -87,7 +86,7 @@ def build_schemas() -> dict:
             **ints(["SA1_CODE21"], *SA1_CODE_RANGE, nullable=False),
             **ints(["SA2_CODE21"], *SA2_CODE_RANGE, nullable=False)}),
         "businesses": table({
-            **text(["industry_code"], allowed=INDUSTRIES),
+            **text(["industry_code"], allowed=sorted(INDUSTRIES)),
             **text(["industry_name", "sa2_name"]),
             **ints(["SA2_CODE21"], *SA2_CODE_RANGE, nullable=False),
             **ints(BUSINESS_COUNTS, lo=0)}, unique=["industry_code", "SA2_CODE21"]),

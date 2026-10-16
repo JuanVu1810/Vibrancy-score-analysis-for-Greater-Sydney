@@ -15,8 +15,6 @@ RAW = ROOT / "raw"
 STAGING = ROOT / "staging"
 MANIFEST_PATH = RAW / "manifest.json"
 
-SRID = 4326
-
 # Bounding boxes (minx, miny, maxx, maxy, degrees) for sanity checks. NSW reaches east to Lord Howe Island.
 NSW_BBOX = (140.0, -38.0, 160.0, -27.0)
 AU_BBOX = (112.0, -45.0, 160.0, -9.0)

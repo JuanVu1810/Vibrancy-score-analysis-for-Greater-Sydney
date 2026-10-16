@@ -82,24 +82,24 @@ def load(tables: dict, table_sources: dict, records: dict, sources_by_id: dict, 
         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}"))
     for name, df in tables.items():
         try:
-            if isinstance(df, gpd.GeoDataFrame):
-                # A table with some empty geometries (polling places) would otherwise become a generic GEOMETRY.
-                kinds = df.geometry.dropna().geom_type.unique()
-                gtype = kinds[0].upper() if len(kinds) == 1 else "GEOMETRY"
-                df.to_postgis(name, eng, schema=SCHEMA, if_exists="replace", index=False,
-                              dtype={"geom": Geometry(gtype, srid=4326)})
-                with eng.begin() as conn:  # geopandas may still create a generic GEOMETRY column
+            src = table_sources[name]
+            rec = records[src.id]
+            t = f'{SCHEMA}."{name}"'
+            # One transaction per table: if any step fails, the old table is still there afterwards.
+            with eng.begin() as conn:
+                if isinstance(df, gpd.GeoDataFrame):
+                    # A table with some empty geometries (polling places) would otherwise become a generic GEOMETRY.
+                    kinds = df.geometry.dropna().geom_type.unique()
+                    gtype = kinds[0].upper() if len(kinds) == 1 else "GEOMETRY"
+                    df.to_postgis(name, conn, schema=SCHEMA, if_exists="replace", index=False,
+                                  dtype={"geom": Geometry(gtype, srid=4326)})
+                    # geopandas may still create a generic GEOMETRY column
                     have = conn.execute(text("SELECT type FROM geometry_columns WHERE f_table_schema=:s "
                                              "AND f_table_name=:t"), {"s": SCHEMA, "t": name}).scalar()
                     if gtype != "GEOMETRY" and have != gtype:
-                        conn.execute(text(f'ALTER TABLE {SCHEMA}."{name}" ALTER COLUMN geom '
-                                          f'TYPE geometry({gtype}, 4326)'))
-            else:
-                df.to_sql(name, eng, schema=SCHEMA, if_exists="replace", index=False)
-            src = table_sources[name]
-            rec = records[src.id]
-            with eng.begin() as conn:
-                t = f'{SCHEMA}."{name}"'
+                        conn.execute(text(f'ALTER TABLE {t} ALTER COLUMN geom TYPE geometry({gtype}, 4326)'))
+                else:
+                    df.to_sql(name, conn, schema=SCHEMA, if_exists="replace", index=False)
                 for stmt in _INDEXES.get(name, []):
                     conn.execute(text(stmt.format(t=t)))
                 if isinstance(df, gpd.GeoDataFrame):

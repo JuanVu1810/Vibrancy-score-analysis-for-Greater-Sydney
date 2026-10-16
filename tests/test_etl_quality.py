@@ -170,3 +170,10 @@ def test_business_parser_refuses_a_layout_with_different_turnover_bands():
                                               (None, None), ("12.6", 13), ("n/a", None)])
 def test_to_int_reads_abs_cells(value, expected):
     assert to_int(value) == expected
+
+
+# --- Greater Sydney coverage check ---------------------------------------------------------------
+def test_a_coverage_check_without_the_boundaries_warns_that_it_was_skipped(monkeypatch):
+    monkeypatch.setattr(abs_sources, "greater_sydney_codes", lambda ctx: None)
+    issues = abs_sources.check_business({"businesses": businesses()}, None)
+    assert any(level == "warn" and "coverage was not checked" in message for level, message in issues)
