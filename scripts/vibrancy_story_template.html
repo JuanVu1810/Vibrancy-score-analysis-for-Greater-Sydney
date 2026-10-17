@@ -652,7 +652,7 @@
     cursor:pointer;
     font-size:17px;
     font-weight:700
-}details.step summary span{
+}details.step summary>span{
     display:block;
     margin-top:2px;
     color:var(--ink2);
@@ -1118,7 +1118,7 @@
 </ul>
 </details>
 <details class="step" id="indicators">
-<summary>2. Measure 14 things in every SA2<span>Ten for Intensity, two for Diversity and two for Design</span></summary>
+<summary>2. Measure 14 things in every SA2<span>10 for Intensity, 2 for Diversity and 2 for Design</span></summary>
 <p>An indicator is one measurable ingredient of street life. Most are counts for each square kilometre of the whole SA2, so a large SA2 is not given a high score just for being large.</p>
 <p class="formula">per-area value = number of items in the SA2 ÷ area of the SA2 (km²)</p>
 <p class="formula-note">Residents are counted per hectare instead: residents ÷ (area in km² × 100). The 12 indicators measured this way are called the per-area indicators below. This is a different idea from the "density" used for place types, which is explained in step 4.</p>
@@ -3516,8 +3516,16 @@ function drawStability() {
         const maximumX = left + maximumWidth;
         const moverLines = [row.mover_name, 'swings ' + row.mover_rank_min + ' to ' + row.mover_rank_max];
         const moverWidth = Math.max(...moverLines.map(line => chartTextWidth(chart.s, line)));
-        const moverX = Math.max(frame.left + moverWidth / 2, Math.min(maximumX, frame.right - moverWidth / 2));
-        const moverLabel = addChartLines(chart.s, moverX, centreY + 22, moverLines, 'middle', 'tick halo mover-label');
+        // Put the label beside the end of the extension when it fits there. Otherwise put it below,
+        // where the lower rows would otherwise run into the x-axis.
+        const sideTop = centreY + 4 - chartLineHeight * (moverLines.length - 1) / 2;
+        let moverLabel = addChartLines(chart.s, maximumX + 8, sideTop, moverLines, 'start', 'tick halo mover-label');
+        const sideBox = moverLabel.getBBox();
+        if (sideBox.x + sideBox.width > frame.right || boxesOverlap(sideBox, medianLabel.getBBox())) {
+            moverLabel.remove();
+            const moverX = Math.max(frame.left + moverWidth / 2, Math.min(maximumX, frame.right - moverWidth / 2));
+            moverLabel = addChartLines(chart.s, moverX, centreY + 22, moverLines, 'middle', 'tick halo mover-label');
+        }
         // On a narrow chart the clamp above can pull this label onto the bar or the extension;
         // when that happens, switch to whichever fixed fill reads well on the shape it now covers.
         const moverBox = moverLabel.getBBox();
