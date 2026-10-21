@@ -53,7 +53,7 @@ COLOR_ROLES = {
         "data-stops": "#0072B2", "data-intersections": "#2b2b2b", "data-crossings": "#D55E00",
         "data-shops": "#E69F00", "data-amenities": "#009E73", "data-traffic_lights": "#CC3366",
         "data-polling_places": "#7B3FA0", "data-hospitals": "#C8102E",
-        "data-schools_primary": "#8C6D1F", "data-schools_high": "#4F5D75", "data-schools_infants": "#7A6A3A",
+        "data-schools_primary": "#8C6D1F", "data-schools_high": "#4F5D75", "data-schools_infants": "#6E8B1A",
     },
     "dark": {
         "ink": "#ffffff", "not-scored": "#f0efe9", "chosen-ring": "#ffffff",
@@ -79,7 +79,7 @@ COLOR_ROLES = {
         "data-stops": "#56B4E9", "data-intersections": "#ededed", "data-crossings": "#FF8A50",
         "data-shops": "#F5C242", "data-amenities": "#2FD3A0", "data-traffic_lights": "#FF6F9C",
         "data-polling_places": "#C39BE6", "data-hospitals": "#FF5A5F",
-        "data-schools_primary": "#D9B76A", "data-schools_high": "#9FB1D1", "data-schools_infants": "#C9B58A",
+        "data-schools_primary": "#D9B76A", "data-schools_high": "#9FB1D1", "data-schools_infants": "#B7D56A",
     },
 }
 # Light-theme colours read from the table above, for the static figures and the page's map data.
