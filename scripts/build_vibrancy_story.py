@@ -12,6 +12,7 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import shapely
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = ROOT / "output"
@@ -48,6 +49,11 @@ COLOR_ROLES = {
         # fill barely needed darkening at all; the extra darkening keeps the two readably distinct.
         "place-dense-diverse-text": "#006B5A", "place-less-dense-diverse-text": "#477a71",
         "place-dense-less-diverse-text": "#8f6b58", "place-less-dense-less-diverse-text": "#644b32",
+        # One colour for each dataset on the page's data map (the last section of the page).
+        "data-stops": "#0072B2", "data-intersections": "#2b2b2b", "data-crossings": "#D55E00",
+        "data-shops": "#E69F00", "data-amenities": "#009E73", "data-traffic_lights": "#CC3366",
+        "data-polling_places": "#7B3FA0", "data-hospitals": "#C8102E",
+        "data-schools_primary": "#8C6D1F", "data-schools_high": "#4F5D75", "data-schools_infants": "#7A6A3A",
     },
     "dark": {
         "ink": "#ffffff", "not-scored": "#f0efe9", "chosen-ring": "#ffffff",
@@ -69,11 +75,40 @@ COLOR_ROLES = {
         # and less diverse" is lightened further still for the same distinctness reason as light theme.
         "place-dense-diverse-text": "#00C0A0", "place-less-dense-diverse-text": "#109a82",
         "place-dense-less-diverse-text": "#AB8876", "place-less-dense-less-diverse-text": "#c6b29c",
+        # Lighter shades of the same hues, so the dots stand out on the dark map.
+        "data-stops": "#56B4E9", "data-intersections": "#ededed", "data-crossings": "#FF8A50",
+        "data-shops": "#F5C242", "data-amenities": "#2FD3A0", "data-traffic_lights": "#FF6F9C",
+        "data-polling_places": "#C39BE6", "data-hospitals": "#FF5A5F",
+        "data-schools_primary": "#D9B76A", "data-schools_high": "#9FB1D1", "data-schools_infants": "#C9B58A",
     },
 }
 # Light-theme colours read from the table above, for the static figures and the page's map data.
 RAMP = [COLOR_ROLES["light"][f"fifth-{step}"] for step in range(1, 6)]
 HOTSPOT_COLOR = COLOR_ROLES["light"]["not-scored"]
+# The datasets on the page's data map, in the order of the buttons. The key names the colour (data-<key> in
+# COLOR_ROLES) and the file map_layers/<key>.js. A "points" dataset is drawn as dots, with a radius in pixels at the
+# default zoom, and its hover total is density times area from the "count_column" of the scores file. An "areas"
+# dataset is drawn as outlines, and its hover total comes from the school group table. The points run from the most
+# numerous dataset to the fewest, and the page draws later ones on top of earlier ones.
+DATA_MAP_LAYERS = [
+    {"key": "intersections", "name": "Street intersections", "kind": "points", "radius": 0.9, "count_column": "intersections_per_km2"},
+    {"key": "crossings", "name": "Pedestrian crossings", "kind": "points", "radius": 1.3, "count_column": "crossings_per_km2"},
+    {"key": "stops", "name": "Transport stops", "kind": "points", "radius": 1.3, "count_column": "stops_per_km2"},
+    {"key": "shops", "name": "Everyday shops", "kind": "points", "radius": 1.8, "count_column": "shops_per_km2"},
+    {"key": "amenities", "name": "Public toilets and drinking water", "kind": "points", "radius": 1.5, "count_column": "amenities_per_km2"},
+    {"key": "traffic_lights", "name": "Traffic lights", "kind": "points", "radius": 1.6, "count_column": "traffic_lights_per_km2"},
+    {"key": "polling_places", "name": "Polling places", "kind": "points", "radius": 2.2, "count_column": "polling_places_per_km2"},
+    {"key": "hospitals", "name": "Hospitals", "kind": "points", "radius": 3.5, "count_column": "hospitals_per_km2"},
+    {"key": "schools_primary", "name": "Primary school catchments", "kind": "areas", "group": "primary"},
+    {"key": "schools_high", "name": "High school catchments", "kind": "areas", "group": "high"},
+    {"key": "schools_infants", "name": "Infants school catchments", "kind": "areas", "group": "infants"},
+]
+MAP_POINT_KEYS = [layer["key"] for layer in DATA_MAP_LAYERS if layer["kind"] == "points"]
+SCHOOL_GROUPS = [layer["group"] for layer in DATA_MAP_LAYERS if layer["kind"] == "areas"]
+MAP_EDGE_MARGIN = 0.15
+MAP_COORDINATE_DIGITS = 5
+SCHOOL_SIMPLIFY_TOLERANCE = 0.0003
+SCHOOL_GRID_SIZE = 0.0001
 PLACE_CSS_NAME = {
     "dense and diverse": "dense-diverse",
     "dense and less diverse": "dense-less-diverse",
@@ -208,6 +243,8 @@ def css_color_variables(theme):
         variables.append(f"--place-{name}-text:{roles[f'place-{name}-text']}")
     for name in HOTSPOT_CSS_NAME.values():
         variables.append(f"--{name}:{roles[name]}")
+    for layer in DATA_MAP_LAYERS:
+        variables.append(f"--data-{layer['key']}:{roles['data-' + layer['key']]}")
     return ";\n    ".join(variables) + ";"
 
 
@@ -246,6 +283,14 @@ def add_hotspot_columns(regions, tables_dir):
     table = read_table(tables_dir, "vibrancy_hotspots.csv")[columns].copy()
     table["sa2_code"] = table["sa2_code"].astype(int)
     table = table.rename(columns={"p_value": "hotspot_p_value"})
+    return regions.merge(table, on="sa2_code", how="left")
+
+
+def add_school_group_counts(regions, tables_dir):
+    """Add each SA2's share of the primary, high school and infants catchments, for the data map's hover text."""
+    table = read_table(Path(tables_dir) / "map_layers", "school_group_counts.csv")
+    table = table.rename(columns={group: f"schools_{group}" for group in SCHOOL_GROUPS})
+    table["sa2_code"] = table["sa2_code"].astype(int)
     return regions.merge(table, on="sa2_code", how="left")
 
 
@@ -1375,6 +1420,46 @@ def figure_chance_squares(regions, out_dir):
     return figure_squares(total, chance_positions(total), caption, note, "vibrancy_chance.png", out_dir)
 
 
+def figure_data_map(regions, tables_dir, out_dir):
+    """Save a static version of the page's data map: one panel for each dataset, in the page's colours.
+
+    A point panel shows the items that were counted; a school panel shows that group's catchment outlines.
+    """
+    import matplotlib.pyplot as plt
+    columns = 4
+    rows = math.ceil(len(DATA_MAP_LAYERS) / columns)
+    projected = regions.to_crs(METRIC_CRS)
+    frame = built_up_frame()
+    layer_dir = Path(tables_dir) / "map_layers"
+    catchments = gpd.read_file(layer_dir / "school_catchments.geojson").to_crs(METRIC_CRS)
+    fig, axes = plt.subplots(rows, columns, figsize=(14, 3.7 * rows), dpi=180)
+    for axis, layer in zip(axes.flat, DATA_MAP_LAYERS):
+        colour = COLOR_ROLES["light"][f"data-{layer['key']}"]
+        projected.plot(ax=axis, color="#e9e9e5", edgecolor="#b6b7b0", linewidth=0.2)
+        if layer["kind"] == "points":
+            table = read_table(layer_dir, f"{layer['key']}.csv")
+            counted = table[table["inside"]]
+            dots = gpd.GeoSeries(gpd.points_from_xy(counted["lon"], counted["lat"]), crs=4326).to_crs(METRIC_CRS)
+            axis.scatter(dots.x, dots.y, s=layer["radius"] ** 2 * 0.6, color=colour, linewidths=0, alpha=0.8)
+            subtitle = f"{len(counted):,} counted"
+        else:
+            group = catchments[catchments["school_group"] == layer["group"]]
+            group.boundary.plot(ax=axis, color=colour, linewidth=0.5)
+            subtitle = f"{len(group):,} touch Greater Sydney"
+        axis.set_xlim(min(x for x, y in frame), max(x for x, y in frame))
+        axis.set_ylim(min(y for x, y in frame), max(y for x, y in frame))
+        axis.set_title(f"{layer['name']}\n{subtitle}", loc="left", fontsize=10, fontweight="bold")
+        hide_axes(axis)
+    for axis in list(axes.flat)[len(DATA_MAP_LAYERS):]:
+        axis.set_visible(False)
+    fig.suptitle("Every dataset behind the score, after it was matched to SA2s", x=0.01, ha="left", fontsize=14, fontweight="bold")
+    note = ("Dots are the items counted in the SA2 that holds them. Outlines are school catchments, which overlap each other, "
+            "so each group has its own panel. Items outside the 373 SA2s are not counted and not shown.")
+    fig.text(0.01, 0.005, textwrap.fill(note, 150), fontsize=8, color="#52514e", va="bottom")
+    fig.tight_layout(rect=(0, 0.03, 1, 0.95), h_pad=3)
+    return save_figure(fig, out_dir, "vibrancy_data_map.png")
+
+
 def build_chart_figures(regions, stats, out_dir):
     """Save a static version of each chart on the page into `out_dir`/images, and return the saved paths."""
     image_dir = Path(out_dir) / "images"
@@ -1407,6 +1492,21 @@ def int_or_none(value):
     if pd.isna(value):
         return None
     return int(value)
+
+
+def map_counts(row):
+    """Return the totals the data map shows when you hover over an SA2 (stops and intersections are set elsewhere)."""
+    counts = {}
+    for layer in DATA_MAP_LAYERS:
+        key = layer["key"]
+        if key in ("stops", "intersections"):
+            continue
+        if layer["kind"] == "areas":
+            # A catchment that spans SA2s is shared out by area, so an SA2's total can be a fraction.
+            counts[key] = float_or_none(row[key], digits=1)
+        else:
+            counts[key] = total_count(row[layer["count_column"]], row["area_km2"])
+    return counts
 
 
 def geojson(regions):
@@ -1449,6 +1549,7 @@ def geojson(regions):
                       "stops_per_km2": float_or_none(row["stops_per_km2"]),
                       "intersections_per_km2": float_or_none(row["intersections_per_km2"]),
                       "flag": "" if pd.isna(row["flag"]) else str(row["flag"])}
+        properties.update(map_counts(row))
         geometry = json.loads(gpd.GeoSeries([row.geometry], crs=4326).to_json())["features"][0]["geometry"]
         features.append({"type": "Feature", "properties": properties, "geometry": geometry})
     return {"type": "FeatureCollection", "features": features}
@@ -1457,6 +1558,59 @@ def geojson(regions):
 def table_records(table):
     """Return a table's rows as a list of dicts, with missing values as None (null in the page's JSON)."""
     return table.where(pd.notna(table), None).to_dict("records")
+
+
+def flat_coordinates(table):
+    """Return a points table as one flat list: longitude, latitude, longitude, latitude, and so on."""
+    pairs = zip(table["lon"].round(MAP_COORDINATE_DIGITS), table["lat"].round(MAP_COORDINATE_DIGITS))
+    return [float(value) for pair in pairs for value in pair]
+
+
+def write_layer_file(path, key, content):
+    """Write one layer as a small script that hands its data to the page's mapLayerLoaded function."""
+    text = json.dumps(content, separators=(",", ":")).replace("</", "<\\/")
+    path.write_text(f'mapLayerLoaded("{key}",{text});\n', encoding="utf-8")
+
+
+def write_map_layers(regions, tables_dir, out_dir):
+    """Write one script per data-map layer, so the page loads a dataset only when it is switched on.
+
+    Each point layer holds the points that were counted, the points that fall outside the 373 SA2s but near
+    the map (shown as rings on request) and the number of outside points in all. The school layer holds the
+    catchments that touch Greater Sydney, one file for each group (primary, high school and infants).
+    """
+    layer_dir = Path(out_dir) / "map_layers"
+    layer_dir.mkdir(parents=True, exist_ok=True)
+    west, south, east, north = regions.to_crs(4326).total_bounds
+    for key in MAP_POINT_KEYS:
+        points = read_table(Path(tables_dir) / "map_layers", f"{key}.csv")
+        outside = points[~points["inside"]]
+        near_lon = outside["lon"].between(west - MAP_EDGE_MARGIN, east + MAP_EDGE_MARGIN)
+        near_lat = outside["lat"].between(south - MAP_EDGE_MARGIN, north + MAP_EDGE_MARGIN)
+        near_edge = near_lon & near_lat
+        write_layer_file(layer_dir / f"{key}.js", key, {
+            "counted": flat_coordinates(points[points["inside"]]),
+            "outside": flat_coordinates(outside[near_edge]),
+            "outside_total": len(outside),
+        })
+    catchments = gpd.read_file(Path(tables_dir) / "map_layers" / "school_catchments.geojson")
+    catchments.geometry = catchments.geometry.simplify(SCHOOL_SIMPLIFY_TOLERANCE)
+    catchments.geometry = shapely.set_precision(catchments.geometry.values, SCHOOL_GRID_SIZE)
+    for layer in DATA_MAP_LAYERS:
+        if layer["kind"] == "areas":
+            group = catchments[catchments["school_group"] == layer["group"]][["geometry"]]
+            write_layer_file(layer_dir / f"{layer['key']}.js", layer["key"], json.loads(group.to_json(drop_id=True)))
+
+
+def data_map_chips():
+    """Return the buttons that switch each dataset on the data map."""
+    buttons = ""
+    for layer in DATA_MAP_LAYERS:
+        buttons += (
+            f'<button class="chip data-layer" data-key="{layer["key"]}" aria-pressed="false">'
+            f'<i class="data-dot" style="background:var(--data-{layer["key"]})"></i>{html.escape(layer["name"])}</button>'
+        )
+    return buttons
 
 
 def page_html(regions, stats):
@@ -1483,7 +1637,7 @@ def page_html(regions, stats):
             "variant_ranks": table_records(chart["variant_ranks"]),
             "sensitivity": table_records(chart["sensitivity"]),
             "score_middle_share": stats["score_middle_share"],
-            "card_names": [card["name"] for card in stats["cards"]]}
+            "card_names": [card["name"] for card in stats["cards"]], "data_layers": DATA_MAP_LAYERS}
     limits = "".join(f"<li>{html.escape(item)}</li>" for item in stats["limits"])
     scored_sa2s = headline["scored_sa2s"]
     coverage_picture, coverage_caption = walking_count_squares(scored_sa2s, chart["foot_sites"])
@@ -1526,6 +1680,7 @@ def page_html(regions, stats):
         "BY_CHANCE": str(by_chance),
         "LABELLED_CLUSTERS": str(labelled_clusters),
         "METHODS_DETAIL": pillar_html(METHODS_DETAIL),
+        "DATA_MAP_CHIPS": data_map_chips(),
         "COLOR_VARIABLES_LIGHT": css_color_variables("light"),
         "COLOR_VARIABLES_DARK": css_color_variables("dark"),
         "DATA": json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/"),
@@ -1578,7 +1733,7 @@ def card_html(card):
 def build(scores=OUTPUT_DIR / "vibrancy_scores.csv", out_dir=ROOT / "vibrancy", tables_dir=OUTPUT_DIR, page=True, images=True):
     """Write the story page and static figures from saved output files."""
     out_dir = Path(out_dir)
-    regions = add_hotspot_columns(load_regions(scores), tables_dir)
+    regions = add_school_group_counts(add_hotspot_columns(load_regions(scores), tables_dir), tables_dir)
     stats = compute_stats(regions, tables_dir)
     assert stats["rank_counts"] == [74, 74, 75, 74, 75] or int(regions["scored"].eq(True).sum()) != 372
     written = []
@@ -1594,6 +1749,7 @@ def build(scores=OUTPUT_DIR / "vibrancy_scores.csv", out_dir=ROOT / "vibrancy", 
         out_dir.mkdir(parents=True, exist_ok=True)
         page_path = out_dir / "index.html"
         page_path.write_text(page_html(regions, stats), encoding="utf-8")
+        write_map_layers(regions, tables_dir, out_dir)
         written.append(page_path)
     return regions, stats, written
 

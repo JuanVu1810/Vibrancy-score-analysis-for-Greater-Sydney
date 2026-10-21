@@ -168,6 +168,25 @@
     border-radius:10px;
     overflow:hidden;
     background:var(--plane)
+}#data-map{
+    height:660px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+    background:var(--plane)
+}#data-map .leaflet-interactive:focus{
+    outline:none
+}.dot-canvas{
+    position:absolute;
+    left:0;
+    top:0;
+    pointer-events:none
+}.data-dot{
+    display:inline-block;
+    width:10px;
+    height:10px;
+    margin-right:6px;
+    border-radius:50%
 }.leaflet-container{
     background:var(--plane);
     font:inherit
@@ -587,7 +606,7 @@
         padding:16px 14px
     }.kpis,.two,.four,.drawer-grid{
         grid-template-columns:1fr
-    }#map{
+    }#map,#data-map{
         height:480px
     }.profile{
         position:static;
@@ -780,6 +799,7 @@
 <li><a href="#methods">How it was made</a></li>
 <li><a href="#limitations">Limitations</a></li>
 <li><a href="#next-steps">Next steps</a></li>
+<li><a href="#all-data">All the data on a map</a></li>
 <li><a href="#table-view">Table of all scores</a></li>
 </ol>
 </details>
@@ -1085,9 +1105,9 @@
 <section class="card" id="stability">
 <p class="kicker">How sure can we be?</p>
 <h2>The top group is stable, but individual ranks are not: the median SA2 moves {{MEDIAN_RANGE}} places</h2>
-<p class="sub">The top 25 retains {{TOP_OVERLAP}} of the same 25 SA2s across variants. A variant is a rebuilt version of the score with one choice changed, for example dropping one data source or skipping the log transform. We made 22 of them. The top group stays mostly the same, but where one SA2 lands in the ranking depends a lot on the choices made.</p>
+<p class="sub">The top 25 retains {{TOP_OVERLAP}} of the same 25 SA2s across variants. A variant is a rebuilt version of the score with one choice changed, for example dropping one data source or skipping the log transform. We made 22 of them.</p>
 <p class="how">
-<strong>How to read it:</strong> For every SA2 we looked at its best and worst rank across the baseline and the 22 variants. Each bar shows the typical (median) gap between those two ranks for one quintile, and the named SA2 is the most volatile member of that quintile. A longer bar means the SA2s in that group are less certain about their rank.</p>
+<strong>How to read it:</strong> For every SA2 we looked at its best and worst rank across the baseline and the 22 variants. Each bar shows the typical (median) gap between those two ranks for one quintile, and the named SA2 is the most volatile member of that quintile. A longer bar means the ranks in that group are less certain.</p>
 <div id="stability-chart" class="chart" data-band-order="Top quintile (75 SA2s)|Second quintile (74 SA2s)|Middle quintile (75 SA2s)|Fourth quintile (74 SA2s)|Bottom quintile (74 SA2s)" aria-label="Rank movement across sensitivity checks">
 </div>
 <p class="note">Ranks near the top and the bottom of the table hold still; ranks in the middle move the most. This is probably because many SA2s in the middle have very similar scores, so a small change can reorder them.</p>
@@ -1113,7 +1133,9 @@
 <ul class="plain">
 <li>Python cleaned and checked 15 public sources and loaded 17 data tables into PostgreSQL/PostGIS, a database that can store map data. Two more tables record where each source came from and the results of the quality checks, making 19 tables in all.</li>
 <li>Every downloaded file is checked against a recorded checksum, so a file that has changed is caught before it is used.</li>
-<li>SQL and GeoPandas (a Python mapping library) put each located item, such as a bus stop or a pedestrian crossing, into the SA2 that contains it. A point exactly on a boundary goes to the SA2 with the lower code, so it is counted once.</li>
+<li><strong>Points go into the SA2 they sit in.</strong> Each located item, such as a bus stop or a pedestrian crossing, is matched to the SA2 whose boundary it falls inside or touches. This is a spatial join: a match on location instead of on a shared ID. Most counts are matched in SQL, and the street intersections, which are worked out in Python, are matched with GeoPandas (a Python mapping library) using the same rule. A point exactly on a boundary belongs to two SA2s, so it goes to the one with the lower code and is counted once.</li>
+<li><strong>School catchments are shared out by area.</strong> A catchment is an area, and many cross SA2 borders, so it cannot go to just one SA2. The map is first converted to metres, then the overlap of each catchment with each SA2 it touches is measured. Each SA2 gets that share of a catchment, so a catchment adds up to one in total. The part that falls outside the 373 SA2s is not counted. One of the stability checks in step 4 instead gives each catchment whole to the SA2 it overlaps most.</li>
+<li><strong>Street intersections are found first, then matched.</strong> They are worked out from the road lines as the points where at least three road ends meet, and those points are matched to SA2s like any other point.</li>
 <li>Records with a missing location, and records outside Greater Sydney, were counted as each indicator was built. For every source, the number that came in equals the number assigned plus the number dropped, and the assigned totals were checked against the totals expected from the data, so the exclusions can be checked.</li>
 </ul>
 </details>
@@ -1181,22 +1203,22 @@
 <details class="step" id="checks">
 <summary>4. Check the result<span>Stability, neighbours, place types, income and walking counts</span></summary>
 <ul class="plain">
-<li><strong>Stability.</strong> The score was rebuilt 22 ways and the ranks were compared. Each version changes one thing: dropping one data source (12 versions), skipping the log transform, scaling from 0 to 1 instead of with z-scores, weighting every indicator equally, using Intensity alone, using a three-indicator benchmark (residents, land-use mix and street intersections), counting the number of industries instead of how evenly they are spread, leaving out the four industries that are mostly home-based, and three other ways of giving school catchments to SA2s.
+<li><strong>Stability.</strong> We rebuilt the score 22 ways and compared the ranks. Each version changes one thing: dropping one data source (12 versions), skipping the log transform, scaling from 0 to 1 instead of with z-scores, weighting every indicator equally, using Intensity alone, using a three-indicator benchmark (residents, land-use mix and street intersections), counting the number of industries instead of how evenly they are spread, leaving out the four industries that are mostly home-based, and three other ways of giving school catchments to SA2s.
 <span class="formula">rank range = worst rank − best rank, across the baseline and the 22 versions</span>
 <span class="formula">Spearman correlation = ordinary correlation between the two lists of ranks</span></li>
 <li><strong>Neighbours.</strong> Moran's I, a standard measure, checks whether nearby SA2s score alike, and a local version marks groups of similar neighbours as hot spots and cold spots.
 <span class="formula">global <i>I</i> = Σ<sub><i>i</i></sub> <i>z<sub>i</sub></i> · (Σ<sub><i>j</i></sub> <i>w<sub>ij</sub></i> <i>z<sub>j</sub></i>) ÷ Σ<sub><i>i</i></sub> <i>z<sub>i</sub></i>²</span>
 <span class="formula">local <i>I<sub>i</sub></i> = <i>z<sub>i</sub></i> × (average <i>z</i> of the neighbours of <i>i</i>)</span>
 <span class="formula"><i>p</i> = (1 + shuffles with |<i>I</i> shuffled| ≥ |<i>I</i> observed|) ÷ (1 + 999)</span>
-<span class="formula-note"><i>z<sub>i</sub></i> is SA2 <i>i</i>'s standardised score, and <i>w<sub>ij</sub></i> is a weight that is the same for every neighbour of <i>i</i> and zero for other SA2s, so that the weights of each SA2 add up to 1. Neighbours are SA2s that share a border or corner. The average of the local values equals the global <i>I</i>. The local test shuffles the other SA2s' scores 999 times. An SA2 is labelled when <i>p</i> &lt; 0.05: high-high or low-low when its own score and its neighbours' average are both above or both below the average, and an outlier when they differ.</span></li>
-<li><strong>Place types.</strong> SA2s were sorted by whether they are dense and whether they are diverse. Here "density" is a score made from the Intensity and Design pillars. It is not the count per square kilometre used for the individual indicators.
+<span class="formula-note"><i>z<sub>i</sub></i> is SA2 <i>i</i>'s standardised score, and <i>w<sub>ij</sub></i> is a weight that is the same for every neighbour of <i>i</i> and zero for other SA2s, so that the weights of each SA2 add up to 1. Neighbours are SA2s that share a border or corner (found by testing which SA2 outlines touch), and an SA2 that touched no other would be linked to its nearest one. Every scored SA2 touches at least one other, so no extra links were needed. The average of the local values equals the global <i>I</i>. The local test shuffles the other SA2s' scores 999 times. An SA2 is labelled when <i>p</i> &lt; 0.05: high-high or low-low when its own score and its neighbours' average are both above or both below the average, and an outlier when they differ.</span></li>
+<li><strong>Place types.</strong> We sorted SA2s by whether they are dense and whether they are diverse. Here "density" is a score made from the Intensity and Design pillars. It is not the count per square kilometre used for the individual indicators.
 <span class="formula">density score = (Intensity score + Design score) ÷ 2</span>
 <span class="formula">dense if density score ≥ 100 &nbsp;&nbsp; diverse if Diversity score ≥ 100</span>
 <span class="formula-note">These are the pillar scores shown on the page, where 100 is the Greater Sydney average. The chart in the place-type section draws its lines at the same 100.</span></li>
-<li><strong>Income.</strong> SA2s were grouped by median income to see who lives in the highest-scoring places.
+<li><strong>Income.</strong> We grouped SA2s by median income to see who lives in the highest-scoring places.
 <span class="formula">share = residents in top-quintile SA2s of the group ÷ all residents of the group</span>
 <span class="formula-note">The three groups are cut at the points that put about a third of residents in each.</span></li>
-<li><strong>Walking counts.</strong> Scores were compared with real pedestrian counts for the 16 inner-city SA2s that have them. For each site we averaged the four most recent surveys (October 2024 to March 2026), then averaged the sites in each SA2.</li>
+<li><strong>Walking counts.</strong> We compared scores with real pedestrian counts for the 16 inner-city SA2s that have them. For each site we averaged the four most recent surveys (October 2024 to March 2026), then averaged the sites in each SA2.</li>
 </ul>
 </details>
 <p class="source">Source dates: 2021 to 2026, so the inputs are not all from the same year. Data credits: ABS, Transport for NSW, NSW Education, AEC, NSW Spatial Services, City of Sydney (walking counts, used only to check the score) and OpenStreetMap. Contains OpenStreetMap data (c) OpenStreetMap contributors.</p>
@@ -1296,6 +1318,22 @@
 <li><strong>Weights are equal by choice.</strong> Test weights set by experts, or weights learned from measured activity, and compare them with the equal-weight ranking.</li>
 <li><strong>Individual ranks are unstable.</strong> Report each SA2 as a rank range or a score band, not a single rank.</li>
 </ul>
+</section>
+<section class="card" id="all-data">
+<p class="kicker">What went into the score?</p>
+<h2>Every dataset behind the score, after it was matched to SA2s</h2>
+<p class="sub">Switch a dataset on to see each item that was counted. A dot is one item, such as a stop, a shop or a crossing, placed in the SA2 that contains it. A school catchment is drawn as an outline, and primary, high school and infants catchments are separate buttons because they overlap. A dataset loads the first time you switch it on.</p>
+<p class="how">
+<strong>How to read it:</strong> Hover over an SA2 to see how many items of each switched-on dataset it holds. Click one to outline it, and click it again, click the map or press Escape to clear it. These totals are the counts behind the per-area indicators in <a href="#indicators">How it was made</a>. Only the items the score uses are shown: stops and platforms (not station entrances), crossings with signals, markings or zebra stripes, and street intersections found from the road lines. An item on the border between two SA2s is counted in the one with the lower code. Items outside the 373 SA2s are not counted. The last button draws the ones near the map as open rings.</p>
+<div class="chips" role="group" aria-label="Datasets">{{DATA_MAP_CHIPS}}<button class="chip" id="data-outside" aria-pressed="false">Show items outside the SA2s</button>
+</div>
+<p id="data-message" class="state" aria-live="polite">Showing: no dataset yet</p>
+<div id="data-map" role="region" aria-label="Map of the datasets behind the score">
+</div>
+<ul id="data-legend" class="plain">
+</ul>
+<p class="note">Counts include every SA2, scored or not. School catchments are shared out by area between the SA2s they overlap, so an SA2's total can be a fraction.</p>
+<p class="source">Data: ABS SA2 boundaries (2021) and the datasets listed in <a href="#indicators">How it was made</a>. Items are shown after the matching to SA2s and the rules described in step 1 and step 2.</p>
 </section>
 <details class="table" id="table-view">
 <summary>Table view: {{SCORED_SA2S}} scored SA2s</summary>
@@ -1755,6 +1793,312 @@ const layer = L.geoJSON(data.geo, {
 }).addTo(map);
 map.fitBounds(data.built_up_bounds);
 
+// ---- The data map: every dataset behind the score ----
+const dataMap = L.map('data-map', {
+    scrollWheelZoom: false,
+    zoomSnap: 0.25,
+    attributionControl: false,
+});
+L.control.attribution({prefix: 'Leaflet'})
+    .addAttribution('Boundaries (c) ABS (SA2, 2021)')
+    .addTo(dataMap);
+dataMap.createPane('catchments');
+dataMap.getPane('catchments').style.zIndex = 420;
+dataMap.createPane('dots');
+dataMap.getPane('dots').style.zIndex = 450;
+dataMap.getPane('dots').style.pointerEvents = 'none';
+
+const dataLayerInfo = new Map(data.data_layers.map(item => [item.key, item]));
+const dataLayerState = new Map(data.data_layers.map(item => [item.key, {content: null, layer: null, on: false, loading: false}]));
+const DOT_ZOOM_GROWTH = 1.3;
+const DOT_REFERENCE_ZOOM = 9.5;
+const DOT_MIN_RADIUS = 0.6;
+const DOT_OPACITY = 0.8;
+const DOT_MAX_RADIUS = 8;
+let showOutsideItems = false;
+let selectedDataCode = null;
+let hoverDataCode = null;
+
+// Return the colour of one dataset in the current theme.
+function dataColour(key) {
+    return getComputedStyle(root).getPropertyValue('--data-' + key).trim();
+}
+
+// Return the keys of the datasets that are switched on.
+function activeDataKeys() {
+    return [...dataLayerState].filter(([key, state]) => state.on).map(([key]) => key);
+}
+
+// Return the style of one SA2 shape on the data map: pale, so the datasets stand out. The chosen SA2 gets a
+// thick outline along its own border and a stronger fill, and the SA2 under the pointer gets a thinner one.
+function dataPolygonStyle(feature) {
+    const code = String(feature.properties.id);
+    if (code === selectedDataCode) {
+        return {fillColor: mapFade(), fillOpacity: 0.95, color: chosenOutline(), weight: 3};
+    }
+    if (code === hoverDataCode) {
+        return {fillColor: mapFade(), fillOpacity: 0.8, color: getComputedStyle(root).getPropertyValue('--ink').trim(), weight: 2};
+    }
+    return {fillColor: mapFade(), fillOpacity: 0.55, color: mapStroke(), weight: 0.6};
+}
+
+// Return the style of one group of school catchment outlines. Infants catchments are dashed.
+function catchmentStyle(key) {
+    const colour = dataColour(key);
+    return {color: colour, weight: 1.2, fillColor: colour, fillOpacity: 0.04, dashArray: key === 'schools_infants' ? '4 3' : null};
+}
+
+// Build the hover text of one SA2: its total for each dataset that is switched on.
+function dataTooltip(properties) {
+    const nameLine = '<strong>' + textValue(properties.name) + '</strong>';
+    const keys = activeDataKeys();
+    if (keys.length === 0) {
+        return nameLine + '<br><small>Switch a dataset on to see its count here.</small>';
+    }
+    const lines = keys.map(key => {
+        const value = properties[key];
+        const shown = value === null ? 'n/a' : value.toLocaleString('en-AU', {maximumFractionDigits: 1});
+        return dataLayerInfo.get(key).name + ': ' + shown;
+    });
+    return nameLine + '<br>' + lines.join('<br>');
+}
+
+const dataPolygons = L.geoJSON(data.geo, {
+    style: dataPolygonStyle,
+    onEachFeature(feature, item) {
+        item.bindTooltip(() => dataTooltip(feature.properties), {sticky: true});
+        item.on({
+            click: event => {
+                L.DomEvent.stopPropagation(event);
+                chooseDataSa2(String(feature.properties.id) === selectedDataCode ? null : String(feature.properties.id));
+            },
+            mouseover: () => hoverDataSa2(String(feature.properties.id)),
+            mouseout: () => hoverDataSa2(null),
+        });
+    },
+}).addTo(dataMap);
+dataMap.fitBounds(data.built_up_bounds);
+
+// Restyle the SA2 shapes, and give the chosen one a dark halo like the SA2 on the top map.
+function refreshDataPolygons() {
+    dataPolygons.setStyle(dataPolygonStyle);
+    dataPolygons.eachLayer(item => {
+        const element = item.getElement();
+        if (element) {
+            element.classList.toggle('chosen-halo', String(item.feature.properties.id) === selectedDataCode);
+        }
+    });
+}
+
+// Choose one SA2 on the data map, or clear the choice with null.
+function chooseDataSa2(code) {
+    selectedDataCode = code;
+    refreshDataPolygons();
+}
+
+// Mark the SA2 under the pointer, or clear the mark with null.
+function hoverDataSa2(code) {
+    hoverDataCode = code;
+    refreshDataPolygons();
+}
+
+dataMap.on('click', () => chooseDataSa2(null));
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && selectedDataCode !== null) {
+        chooseDataSa2(null);
+    }
+});
+
+// Return the dot radius in pixels for one dataset at a zoom level: bigger as you zoom in.
+function dotRadius(key, zoom) {
+    const radius = dataLayerInfo.get(key).radius * DOT_ZOOM_GROWTH ** (zoom - DOT_REFERENCE_ZOOM);
+    return Math.min(DOT_MAX_RADIUS, Math.max(DOT_MIN_RADIUS, radius));
+}
+
+// Paint a flat list of longitude, latitude pairs as filled dots, or as open rings if hollow.
+function paintDots(context, points, radius, hollow) {
+    const view = dataMap.getBounds();
+    context.beginPath();
+    for (let index = 0; index < points.length; index += 2) {
+        const lon = points[index];
+        const lat = points[index + 1];
+        if (lat < view.getSouth() || lat > view.getNorth() || lon < view.getWest() || lon > view.getEast()) {
+            continue;
+        }
+        const spot = dataMap.latLngToContainerPoint([lat, lon]);
+        context.moveTo(spot.x + radius, spot.y);
+        context.arc(spot.x, spot.y, radius, 0, 2 * Math.PI);
+    }
+    if (hollow) {
+        context.stroke();
+    } else {
+        context.fill();
+    }
+}
+
+// A map layer that paints one dataset's points on a single canvas, so a hundred thousand dots stay quick.
+const DotLayer = L.Layer.extend({
+    initialize(content, key) {
+        this.content = content;
+        this.key = key;
+    },
+    onAdd(map) {
+        this.canvas = L.DomUtil.create('canvas', 'dot-canvas');
+        // Later datasets in the list are drawn on top of earlier ones.
+        this.canvas.style.zIndex = data.data_layers.findIndex(item => item.key === this.key);
+        map.getPane('dots').appendChild(this.canvas);
+        map.on('zoomstart', this.hide, this);
+        map.on('moveend resize', this.draw, this);
+        this.draw();
+    },
+    onRemove(map) {
+        map.off('zoomstart', this.hide, this);
+        map.off('moveend resize', this.draw, this);
+        this.canvas.remove();
+    },
+    hide() {
+        this.canvas.style.visibility = 'hidden';
+    },
+    draw() {
+        const size = dataMap.getSize();
+        const ratio = window.devicePixelRatio || 1;
+        this.canvas.width = size.x * ratio;
+        this.canvas.height = size.y * ratio;
+        this.canvas.style.width = size.x + 'px';
+        this.canvas.style.height = size.y + 'px';
+        this.canvas.style.visibility = 'visible';
+        L.DomUtil.setPosition(this.canvas, dataMap.containerPointToLayerPoint([0, 0]));
+        const context = this.canvas.getContext('2d');
+        context.scale(ratio, ratio);
+        context.fillStyle = dataColour(this.key);
+        context.strokeStyle = dataColour(this.key);
+        context.lineWidth = 1.2;
+        context.globalAlpha = DOT_OPACITY;
+        const radius = dotRadius(this.key, dataMap.getZoom());
+        paintDots(context, this.content.counted, radius, false);
+        if (showOutsideItems) {
+            paintDots(context, this.content.outside, radius, true);
+        }
+    },
+});
+
+// Show which datasets are on, or that one is loading or failed.
+function showDataMessage(failedKey) {
+    const message = document.querySelector('#data-message');
+    const keys = activeDataKeys();
+    const names = keys.map(key => dataLayerInfo.get(key).name);
+    const loading = keys.filter(key => dataLayerState.get(key).loading);
+    if (failedKey) {
+        message.textContent = 'Could not load ' + dataLayerInfo.get(failedKey).name + '. Check that the map_layers folder sits next to this page.';
+    } else if (loading.length > 0) {
+        message.textContent = 'Loading ' + loading.map(key => dataLayerInfo.get(key).name).join(', ') + '...';
+    } else if (names.length === 0) {
+        message.textContent = 'Showing: no dataset yet';
+    } else {
+        message.textContent = 'Showing: ' + names.join(', ');
+    }
+}
+
+// List each loaded dataset under the map with what was counted.
+function renderDataLegend() {
+    const list = document.querySelector('#data-legend');
+    list.replaceChildren();
+    for (const key of activeDataKeys()) {
+        const state = dataLayerState.get(key);
+        if (!state.content) {
+            continue;
+        }
+        const swatch = document.createElement('i');
+        swatch.className = 'data-dot';
+        swatch.style.background = 'var(--data-' + key + ')';
+        let text = '';
+        if (dataLayerInfo.get(key).kind === 'areas') {
+            text = state.content.features.length.toLocaleString('en-AU') + ' touch Greater Sydney';
+        } else {
+            text = (state.content.counted.length / 2).toLocaleString('en-AU') + ' counted in SA2s, ' +
+                state.content.outside_total.toLocaleString('en-AU') + ' outside the SA2s and not counted';
+        }
+        const item = document.createElement('li');
+        item.append(swatch, dataLayerInfo.get(key).name + ': ' + text);
+        list.append(item);
+    }
+}
+
+// Put one dataset's layer on the map. The high school zones are the largest, so they go underneath the others.
+function addDataLayer(key) {
+    const state = dataLayerState.get(key);
+    state.layer.addTo(dataMap);
+    if (key === 'schools_high') {
+        state.layer.bringToBack();
+    }
+}
+
+// Called by each file in map_layers/ when it has loaded: build that dataset's map layer.
+function mapLayerLoaded(key, content) {
+    const state = dataLayerState.get(key);
+    state.content = content;
+    state.loading = false;
+    state.layer = dataLayerInfo.get(key).kind === 'areas'
+        ? L.geoJSON(content, {pane: 'catchments', interactive: false, style: () => catchmentStyle(key)})
+        : new DotLayer(content, key);
+    if (state.on) {
+        addDataLayer(key);
+    }
+    showDataMessage();
+    renderDataLegend();
+}
+
+// Load one dataset's file the first time it is switched on.
+function loadDataLayer(key) {
+    const state = dataLayerState.get(key);
+    state.loading = true;
+    const script = document.createElement('script');
+    script.src = 'map_layers/' + key + '.js';
+    script.onerror = () => {
+        state.loading = false;
+        setDataLayer(key, false);
+        showDataMessage(key);
+    };
+    document.head.append(script);
+}
+
+// Switch one dataset on or off.
+function setDataLayer(key, on) {
+    const state = dataLayerState.get(key);
+    state.on = on;
+    document.querySelector('.data-layer[data-key="' + key + '"]').setAttribute('aria-pressed', String(on));
+    if (on && state.content) {
+        addDataLayer(key);
+    } else if (on && !state.loading) {
+        loadDataLayer(key);
+    } else if (!on && state.layer) {
+        state.layer.remove();
+    }
+    showDataMessage();
+    renderDataLegend();
+}
+
+// Redraw the data map after the theme changes, because its colours come from the theme.
+function redrawDataMap() {
+    refreshDataPolygons();
+    for (const [key, state] of dataLayerState) {
+        if (state.on && state.layer && dataLayerInfo.get(key).kind === 'areas') {
+            state.layer.setStyle(catchmentStyle(key));
+        } else if (state.on && state.layer) {
+            state.layer.draw();
+        }
+    }
+}
+
+document.querySelectorAll('.data-layer').forEach(button => {
+    button.onclick = () => setDataLayer(button.dataset.key, button.getAttribute('aria-pressed') !== 'true');
+});
+document.querySelector('#data-outside').onclick = event => {
+    showOutsideItems = !showOutsideItems;
+    event.currentTarget.setAttribute('aria-pressed', String(showOutsideItems));
+    redrawDataMap();
+};
+
 const mapPlaces = [
     ['Sydney CBD', -33.87, 151.21],
     ['Parramatta', -33.82, 151.00],
@@ -2051,6 +2395,9 @@ function profilePillar(label, value) {
     ].join('');
 }
 
+// An SA2 with fewer businesses than this gets a caution on its Diversity score.
+const FEW_BUSINESSES = 30;
+
 // Build the accessible map profile card for one SA2.
 function profileHtml(properties) {
     const close = '<button class="close" aria-label="Close profile">×</button>';
@@ -2068,9 +2415,15 @@ function profileHtml(properties) {
         profilePillar('Diversity', properties.diversity),
         profilePillar('Design', properties.design),
     ].join('');
-    const flag = properties.flag && properties.flag.includes('no Diversity') ?
+    let flag = properties.flag && properties.flag.includes('no Diversity') ?
         'Diversity is missing, so this SA2 is scored on Intensity and Design.' :
         textValue(properties.flag || '');
+    if (properties.flag && properties.flag.includes('D1 only') &&
+            properties.businesses < FEW_BUSINESSES) {
+        flag += '<br>Caution: this SA2 has only ' + formatWhole(properties.businesses) +
+            ' businesses, so its Diversity score is unreliable and its very low value ' +
+            'should not be read literally.';
+    }
     const variantLine = mode === 'variant' ? '<br>Rank in this check: ' +
         whatIfRank(properties) + ' (baseline: ' + properties.rank + ')' : '';
     const weightsLine = mode === 'weights'
@@ -2209,6 +2562,7 @@ document.querySelector('#theme').onchange = event => {
     updateMap();
     drawCharts();
     markPaleColourWords();
+    redrawDataMap();
 };
 
 // Return scored SA2s in the current table sort order.

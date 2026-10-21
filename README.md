@@ -82,7 +82,8 @@ has no background tiles by design, so it shows the SA2 shapes only.
 
 The page starts with a short "what this page shows" card that defines the main terms. A contents list (beside the page on a
 wide screen, folded at the top on a narrow one) links to every section. The page ends with how the score was built
-(including a table of the 14 indicators and the equations), the limitations, the next steps and a glossary.
+(including a table of the 14 indicators and the equations), the limitations, the next steps and a glossary. A last map,
+"All the data on a map", shows every dataset behind the score.
 
 On the page you can:
 
@@ -95,6 +96,9 @@ On the page you can:
 - hover over a dot on a chart to highlight that SA2 on the map, and click it to open its card;
 - sort the table by any column, filter it by name and download it as a CSV file;
 - try your own pillar weights, or pick any of the 22 alternative versions, and see how the map and the ranks change;
+- switch on any of eleven datasets (stops, street intersections, crossings, shops, amenities, traffic lights, polling places,
+  hospitals, and primary, high school and infants catchments) on the last map, to see each item that was counted in the SA2 that holds it. Each dataset
+  loads from its own file in `vibrancy/map_layers/` the first time you switch it on;
 - switch between a light and a dark theme;
 - use the page on a phone.
 
@@ -165,7 +169,8 @@ docker compose run --rm --no-deps --entrypoint python etl -m pytest tests -q
   running it; step 1 writes a fresh executed copy to `output/vibrancy_index.executed.ipynb`. On the author's machine step 1 took about 40 seconds and step 2 about 10.
 - **Newer data.** The notebook prints whether each count matches the number documented here (stops, shops, school catchments, place types and so on). A fresh download can differ, and then it prints DIFFERS and carries on. The story builder stops with a message if a table in `output/` is missing.
 - **What each step writes.** Step 1 only reads the database and writes files to `output/`. Step 2 rewrites
-  `vibrancy/index.html` and the figures in `vibrancy/images/`. Neither step writes to the database.
+  `vibrancy/index.html`, the figures in `vibrancy/images/` and the data files in `vibrancy/map_layers/` (about 5 MB). Neither
+  step writes to the database.
 
 ### Build the methodology book
 
@@ -189,7 +194,7 @@ jupyter-book build --html      # the site is written to vibrancy/book/_build/htm
 | `index_tools.py` | The index functions (entropy, standardised scores, assigning points and polygons to SA2s, the street intersection count, place types, Moran's I), each with a small test |
 | `scripts/build_vibrancy_story.py`, `scripts/vibrancy_story_template.html` | Build the story page and its static figures from the files in `output/` |
 | `output/` | The generated results (git-ignored): the scores, the checks, the further analyses and the executed notebook |
-| `vibrancy/index.html`, `vibrancy/images/` | The data story page and its static figures |
+| `vibrancy/index.html`, `vibrancy/images/`, `vibrancy/map_layers/` | The data story page, its static figures and the point and catchment files its last map loads |
 | `vibrancy/book/` | The methodology book (in progress); the rest of `vibrancy/` is the story page above |
 | `tests/` | Tests for the downloader, the unzipping, the parsers, the quality checks, the index functions, the manifest checksums, the saved score table and the saved hot-spot table |
 | `docker-compose.yml`, `Dockerfile` | The PostGIS database and the Python environment |
