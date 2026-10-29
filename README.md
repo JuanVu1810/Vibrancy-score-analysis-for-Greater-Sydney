@@ -109,8 +109,8 @@ On the page you can:
 | Australian Bureau of Statistics | SA2 boundaries, counts of businesses by industry, personal income, regional population, Census mesh block counts | CC BY 4.0 |
 | Transport for NSW | Timetable stops (GTFS), traffic light locations | CC BY |
 | NSW Department of Education | School intake zones (catchments) | CC BY |
-| NSW Spatial Services | Health facilities (hospitals) | not verified |
-| Australian Electoral Commission | Polling places, 2025 federal election | not verified |
+| NSW Spatial Services | Health facilities (hospitals) | CC BY (version not stated by the publisher) |
+| Australian Electoral Commission | Polling places, 2025 federal election | CC BY 4.0 (the AEC website's licence; the file itself states none) |
 | OpenStreetMap contributors | Public toilets and drinking water, pedestrian crossings, the walkable road network, everyday shops | ODbL |
 | City of Sydney | Trees, stairs and mobility parking (inner city only), and pedestrian count sites (inner city only, kept for checking the index) | CC BY 4.0 |
 
@@ -205,7 +205,18 @@ jupyter-book build --html      # the site is written to vibrancy/book/_build/htm
 
 - OpenStreetMap data is © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
   Open Database Licence (ODbL), which has share-alike terms for a derived database.
-- The boundaries and statistics are © the Australian Bureau of Statistics. Transport for NSW, NSW Government and City
-  of Sydney data are used under their open data licences, as in the table above.
-- The AEC and NSW Spatial Services licences were not confirmed. Check each licence before you reuse or redistribute
-  the data.
+- The boundaries and statistics are © the Australian Bureau of Statistics, under CC BY 4.0. Transport for NSW, NSW
+  Department of Education and City of Sydney data are used under their open data licences, as in the table above.
+- The AEC publishes its website material under CC BY 4.0, except the Commonwealth Coat of Arms, AEC logos, AEC maps and
+  third-party content. The polling places file states no licence of its own, so this is the AEC's general licence, not
+  one stated on the download.
+- NSW Spatial Services' Health Facilities layer is treated as CC BY. Its Data.NSW page gives the terms as "Creative
+  Common[s]" with no version, and its licence field says "License Not Specified", so the version is not confirmed
+  (the NSW Government's own website content is CC BY 4.0). It asks for the credit "© State of New South Wales
+  (Spatial Services, a business unit of the Department of Customer Service NSW)", and marks the data access policy as
+  Open. Confirm the version with Spatial Services before you redistribute the hospital points.
+- City of Sydney's trees, stairs and mobility parking layers each state CC BY 4.0. The walking count sites summary layer
+  states no licence itself; the City's other walking count layers (sites and surveys) state CC BY 4.0, and this one is a
+  static copy of the same survey results, so the table uses CC BY 4.0 for it too.
+- Licences were last checked on 29 October 2026, against each publisher's own pages or catalogue records. They can
+  change, so check again before you reuse or redistribute any of the data.

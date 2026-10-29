@@ -59,7 +59,7 @@ def check(out: dict, ctx) -> list:
 
 SOURCES = [
     # AEC's site licence is CC BY 4.0 except for "AEC's maps"; that exception is about map graphics,
-    # not this point-location CSV, but the download page itself states no licence.
+    # not this point-location CSV, but the download itself states no licence (checked 29 Oct 2026).
     Source("polling_places", "AEC federal election polling places",
            "CC BY 4.0 (AEC's general licence; not stated on this download)",
            "Australian Electoral Commission", ("polling_places",), parse, check),
