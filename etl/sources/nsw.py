@@ -89,7 +89,7 @@ SOURCES = [
     Source("catchments", "NSW school intake zones (catchment areas)", "CC BY (Data.NSW)",
            "NSW Department of Education", ("schools",), parse_catchments, check_catchments),
     Source("hospitals", "NSW Features of Interest: Health Facilities (hospitals)",
-           "CC BY (version not stated by the publisher; Data.NSW terms say 'Creative Common')",
+           "CC BY 4.0 (assumed; Data.NSW terms say 'Creative Common' with no version)",
            "(c) State of New South Wales (Spatial Services, a business unit of the Department of Customer Service NSW)",
            ("hospitals",),
            parse_hospitals, check_hospitals),

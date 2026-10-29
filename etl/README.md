@@ -252,9 +252,9 @@ docker compose run --rm --no-deps --entrypoint python etl -m pytest tests -q
   data as CC BY (the TfNSW Open Data Hub pages themselves could not be read). City of Sydney trees,
   stairs and mobility parking are CC BY 4.0. OpenStreetMap is ODbL, which has share-alike terms for a
   derived database. The AEC's website is CC BY 4.0, but its polling places file states no licence, so
-  the manifest says so. NSW Spatial Services' hospitals layer is treated as CC BY: its catalogue terms say
-  "Creative Common" with no version (and the licence field says "License Not Specified"), so the manifest
-  gives no version. Checked on 29 October 2026.
+  the manifest says so. NSW Spatial Services' hospitals layer is treated as CC BY 4.0, which is an assumption: its
+  catalogue terms say "Creative Common" with no version (and the licence field says "License Not Specified"),
+  and 4.0 is the NSW Government's default. Checked on 29 October 2026.
 - **OSM nodes only.** Toilets or crossings mapped as areas or lines aren't counted.
 - **Roads leave out footpaths.** The walkable network uses residential, unclassified, living, tertiary,
   secondary, primary, trunk and pedestrian streets, as AUO's "walkable road network that excluded highways

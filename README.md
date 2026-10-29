@@ -109,7 +109,7 @@ On the page you can:
 | Australian Bureau of Statistics | SA2 boundaries, counts of businesses by industry, personal income, regional population, Census mesh block counts | CC BY 4.0 |
 | Transport for NSW | Timetable stops (GTFS), traffic light locations | CC BY |
 | NSW Department of Education | School intake zones (catchments) | CC BY |
-| NSW Spatial Services | Health facilities (hospitals) | CC BY (version not stated by the publisher) |
+| NSW Spatial Services | Health facilities (hospitals) | CC BY 4.0 (assumed; see below) |
 | Australian Electoral Commission | Polling places, 2025 federal election | CC BY 4.0 (the AEC website's licence; the file itself states none) |
 | OpenStreetMap contributors | Public toilets and drinking water, pedestrian crossings, the walkable road network, everyday shops | ODbL |
 | City of Sydney | Trees, stairs and mobility parking (inner city only), and pedestrian count sites (inner city only, kept for checking the index) | CC BY 4.0 |
@@ -210,11 +210,11 @@ jupyter-book build --html      # the site is written to vibrancy/book/_build/htm
 - The AEC publishes its website material under CC BY 4.0, except the Commonwealth Coat of Arms, AEC logos, AEC maps and
   third-party content. The polling places file states no licence of its own, so this is the AEC's general licence, not
   one stated on the download.
-- NSW Spatial Services' Health Facilities layer is treated as CC BY. Its Data.NSW page gives the terms as "Creative
-  Common[s]" with no version, and its licence field says "License Not Specified", so the version is not confirmed
-  (the NSW Government's own website content is CC BY 4.0). It asks for the credit "© State of New South Wales
-  (Spatial Services, a business unit of the Department of Customer Service NSW)", and marks the data access policy as
-  Open. Confirm the version with Spatial Services before you redistribute the hospital points.
+- NSW Spatial Services' Health Facilities layer is treated as CC BY 4.0, which is an assumption. Its Data.NSW page gives
+  the terms as "Creative Common[s]" with no version, and its licence field says "License Not Specified". 4.0 is the
+  version the NSW Government uses for its own website content. The page asks for the credit "© State of New South
+  Wales (Spatial Services, a business unit of the Department of Customer Service NSW)", and marks the data access
+  policy as Open. Confirm the version with Spatial Services before you redistribute the hospital points.
 - City of Sydney's trees, stairs and mobility parking layers each state CC BY 4.0. The walking count sites summary layer
   states no licence itself; the City's other walking count layers (sites and surveys) state CC BY 4.0, and this one is a
   static copy of the same survey results, so the table uses CC BY 4.0 for it too.
